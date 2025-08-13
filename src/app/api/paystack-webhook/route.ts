@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { adminDb } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
+import { deliverDataBundle } from '@/lib/datamart';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
 
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const event = JSON.parse(body);
-    console.log('🪝 Received Paystack event:', event.event, 'with data:', JSON.stringify(event.data, null, 2));
+    console.log('🪝 Received Paystack event:', event.event);
 
     // charge.success is the event we care about for successful payments
     if (event.event !== 'charge.success') {
@@ -35,13 +36,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { reference, status, metadata, id: transactionId } = event.data;
+    const { firestoreDocId, bundleId, phone: phoneNumber } = metadata;
     const transactionsRef = adminDb.collection('transactions');
       
-    // Use the firestoreDocId from metadata if available (best), otherwise query by reference
+    // Use the firestoreDocId from metadata (best), otherwise query by reference
     let docRef;
-    if (metadata && metadata.firestoreDocId) {
-        console.log(`Found firestoreDocId in metadata: ${metadata.firestoreDocId}`);
-        docRef = transactionsRef.doc(metadata.firestoreDocId);
+    if (firestoreDocId) {
+        console.log(`Found firestoreDocId in metadata: ${firestoreDocId}`);
+        docRef = transactionsRef.doc(firestoreDocId);
     } else {
         console.log(`No firestoreDocId in metadata. Querying by reference: ${reference}`);
         const querySnapshot = await transactionsRef.where('reference', '==', reference).limit(1).get();
@@ -57,30 +59,46 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: 'success', message: 'Transaction not found but acknowledged' });
     }
 
-    // Prepare update payload. Only update if the status is changing.
     const currentDoc = await docRef.get();
     if (currentDoc.exists && currentDoc.data()?.status === 'completed') {
         console.log(`Transaction ${docRef.id} is already marked as completed. No update needed.`);
         return NextResponse.json({ status: 'success', message: 'Already completed' });
     }
     
-    const updatePayload: any = {
-        status: 'completed', // Hardcode to 'completed' since we only process 'charge.success'
+    // 1. First, mark the transaction as paid and being delivered
+    await docRef.update({
+        status: 'delivering',
         updatedAt: Timestamp.now(),
-        paystackData: event.data, // Store the full webhook payload for auditing
-        paystackTransactionId: transactionId, // Store Paystack's own transaction ID
-    };
-    
-    // Add additional metadata if it exists
-    if (metadata?.userId) updatePayload.userId = metadata.userId;
-    if (metadata?.phone) updatePayload.phone = metadata.phone;
+        paystackData: event.data,
+        paystackTransactionId: transactionId,
+    });
+    console.log(`Transaction ${docRef.id} status updated to 'delivering'.`);
 
-    await docRef.update(updatePayload);
 
-    console.log(`✅ Transaction ${reference} (doc: ${docRef.id}) status successfully updated to 'completed'.`);
+    // 2. Attempt to deliver the data bundle using the DataMart API
+    try {
+        if (!phoneNumber) throw new Error("No phone number found in transaction metadata for delivery.");
+        if (!bundleId) throw new Error("No bundleId found in transaction metadata for delivery.");
+        
+        const deliveryResult = await deliverDataBundle(phoneNumber, bundleId);
 
-    // TODO: Here you would trigger the actual data bundle delivery to the user
-    // e.g., await deliverDataBundle(metadata.phone, metadata.bundleId);
+        // 3. If delivery is successful, mark transaction as 'completed'
+        await docRef.update({
+            status: 'completed',
+            updatedAt: Timestamp.now(),
+            datamartResult: deliveryResult,
+        });
+        console.log(`✅ Bundle delivery for ${docRef.id} successful. Transaction marked 'completed'.`);
+
+    } catch (deliveryError: any) {
+        console.error(`🔥 Data bundle delivery FAILED for transaction ${docRef.id}:`, deliveryError);
+        // 4. If delivery fails, mark transaction as 'delivery_failed'
+        await docRef.update({
+            status: 'delivery_failed',
+            updatedAt: Timestamp.now(),
+            deliveryError: deliveryError.message,
+        });
+    }
 
     return NextResponse.json({ status: 'success' });
   } catch (error: any) {

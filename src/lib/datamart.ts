@@ -20,7 +20,9 @@ export type TransactionStatus =
   | 'pending'
   | 'failed'
   | 'abandoned'
-  | 'success';
+  | 'success'
+  | 'delivering' // Added status for when delivery is in progress
+  | 'delivery_failed'; // Added status for when delivery fails
 
 
 export type Transaction = {
@@ -121,4 +123,51 @@ export async function fetchUserTransactions(userId: string): Promise<Transaction
         console.error("Error fetching user transactions from Firestore:", error);
         return [];
     }
+}
+
+/**
+ * Delivers a data bundle to a specified phone number by calling the DataMart API.
+ * @param phone The phone number to deliver the bundle to.
+ * @param bundleId The ID of the bundle from DataMart (e.g., 'YELLO-5').
+ * @returns The result from the DataMart API.
+ */
+export async function deliverDataBundle(phone: string, bundleId: string) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error("DATAMART_API_KEY is not configured on the server.");
+    }
+
+    // The bundleId from our app is 'NETWORK-CAPACITY', e.g., 'YELLO-5'.
+    // The API expects 'network' and 'capacity' as separate fields.
+    const [network, capacity] = bundleId.split('-');
+
+    if (!network || !capacity) {
+        throw new Error(`Invalid bundleId format: ${bundleId}. Expected 'NETWORK-CAPACITY'.`);
+    }
+
+    console.log(`Attempting to deliver bundle. Phone: ${phone}, Network: ${network}, Capacity: ${capacity}GB`);
+
+    const response = await fetch('https://datamartbackened.onrender.com/api/developer/purchase', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey,
+        },
+        body: JSON.stringify({
+            phone,
+            network,
+            capacity: `${capacity}GB`,
+        }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.status !== 'success') {
+        const errorMessage = result.message || 'Unknown error from DataMart API.';
+        console.error(`DataMart API Error: ${errorMessage}`, result);
+        throw new Error(`Failed to deliver bundle: ${errorMessage}`);
+    }
+
+    console.log('Successfully initiated data bundle delivery via DataMart.', result);
+    return result;
 }
