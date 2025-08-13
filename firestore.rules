@@ -1,0 +1,29 @@
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // By default, deny all reads and writes
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // USERS COLLECTION
+    // - Allow users to read and update their own profile.
+    // - Allow any authenticated user to create their own user document (for signup).
+    match /users/{userId} {
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
+    }
+
+    // TRANSACTIONS COLLECTION
+    // - Allow users to read only their own transactions.
+    // - Disallow client-side writes; all transaction creation/updates
+    //   should happen via secure server-side functions.
+    match /transactions/{transactionId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow write: if false; // All writes must be from the server/admin SDK
+    }
+  }
+}
