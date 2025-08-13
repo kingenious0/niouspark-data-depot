@@ -37,12 +37,15 @@ export default function AdminDashboardPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    if (!user) return;
+    // We check `auth.currentUser` directly because the `user` from `useAuth` might not be initialized yet
+    // on the first render, but the auth state might already be available in the Firebase SDK.
+    if (!auth.currentUser) return;
 
     const fetchData = async () => {
         try {
             setLoading(true);
-            const idToken = await user.getIdToken();
+            // Use auth.currentUser which is the full Firebase user object with all methods.
+            const idToken = await auth.currentUser.getIdToken();
             
             // Fetch transactions and balance in parallel
             const [transactionsRes, balanceRes] = await Promise.all([
