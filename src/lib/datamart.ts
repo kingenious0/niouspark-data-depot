@@ -21,8 +21,8 @@ export type TransactionStatus =
   | 'failed'
   | 'abandoned'
   | 'success'
-  | 'delivering' // Added status for when delivery is in progress
-  | 'delivery_failed'; // Added status for when delivery fails
+  | 'delivering'
+  | 'delivery_failed';
 
 
 export type Transaction = {
@@ -170,4 +170,32 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
 
     console.log('Successfully initiated data bundle delivery via DataMart.', result);
     return result;
+}
+
+
+export async function fetchWalletBalance(): Promise<number> {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+        throw new Error("DATAMART_API_KEY is not configured on the server.");
+    }
+
+    console.log("Fetching DataMart wallet balance...");
+
+    const response = await fetch('https://datamartbackened.onrender.com/api/developer/balance', {
+        headers: {
+            'X-API-Key': apiKey,
+        },
+        cache: 'no-store'
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result.status !== 'success') {
+        const errorMessage = result.message || 'Unknown error fetching balance from DataMart API.';
+        console.error(`DataMart API Error: ${errorMessage}`, result);
+        throw new Error(`Failed to fetch wallet balance: ${errorMessage}`);
+    }
+
+    console.log("Successfully fetched wallet balance:", result.data.balance);
+    return parseFloat(result.data.balance);
 }

@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import OrderHistory from "@/components/admin/order-history";
 import SalesCard from "@/components/admin/sales-card";
-import { DollarSign, Package, CreditCard, Users, ShoppingCart, Trash2, Loader2 } from 'lucide-react';
+import { DollarSign, Package, CreditCard, Users, ShoppingCart, Trash2, Loader2, Wallet } from 'lucide-react';
 import AovCard from "@/components/admin/aov-overview";
 import BestSellersCard from "@/components/admin/best-sellers";
 import CancellationsCard from "@/components/admin/cancellations-card";
@@ -26,24 +26,50 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
 import type { AdminTransaction } from "@/lib/datamart";
+import { useAuth } from "@/lib/auth";
 
 export default function AdminDashboardPage() {
+  const { user } = useAuth();
   const [allOrders, setAllOrders] = useState<AdminTransaction[]>([]);
+  const [walletBalance, setWalletBalance] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
+    if (!user) return;
+
     const fetchData = async () => {
         try {
             setLoading(true);
-            const res = await fetch('/api/admin/get-transactions');
-            const data = await res.json();
-            if (res.ok && data.success) {
-                setAllOrders(data.transactions);
+            const idToken = await user.getIdToken();
+            
+            // Fetch transactions and balance in parallel
+            const [transactionsRes, balanceRes] = await Promise.all([
+                fetch('/api/admin/get-transactions', { headers: { 'Authorization': `Bearer ${idToken}` } }),
+                fetch('/api/admin/get-balance', { headers: { 'Authorization': `Bearer ${idToken}` } })
+            ]);
+
+            // Process transactions
+            const transactionsData = await transactionsRes.json();
+            if (transactionsRes.ok && transactionsData.success) {
+                setAllOrders(transactionsData.transactions);
             } else {
-                throw new Error(data.error || 'Failed to fetch transactions');
+                throw new Error(transactionsData.error || 'Failed to fetch transactions');
             }
+
+            // Process balance
+            const balanceData = await balanceRes.json();
+            if (balanceRes.ok && balanceData.success) {
+                setWalletBalance(balanceData.balance);
+            } else {
+                 toast({
+                    title: 'Could not fetch balance',
+                    description: balanceData.error || 'Failed to fetch wallet balance.',
+                    variant: 'destructive',
+                });
+            }
+
         } catch (error: any) {
             toast({
                 title: 'Error fetching data',
@@ -55,7 +81,7 @@ export default function AdminDashboardPage() {
         }
     }
     fetchData();
-  }, [toast]);
+  }, [user, toast]);
 
   const handleDeleteTransactions = async () => {
     setIsDeleting(true);
@@ -147,9 +173,24 @@ export default function AdminDashboardPage() {
             </AlertDialog>
         </div>
       </div>
-       {loading ? <div className="text-center p-10">Loading dashboard data...</div> : (
+       {loading ? <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> <p className="mt-2 text-muted-foreground">Loading dashboard data...</p></div> : (
         <>
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        {walletBalance !== null ? (
+            <DashboardCard
+                title="DataMart Wallet Balance"
+                value={walletBalance}
+                icon={<Wallet className="text-primary" />}
+                description="Live balance"
+            />
+        ) : (
+             <DashboardCard
+                title="DataMart Wallet Balance"
+                value="Unavailable"
+                icon={<Wallet className="text-destructive" />}
+                description="Could not fetch balance"
+            />
+        )}
         <SalesCard value={totalSales} />
         <AovCard value={aov} />
          <DashboardCard
