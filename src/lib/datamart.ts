@@ -44,6 +44,8 @@ export type AdminTransaction = Transaction & {
     email?: string;
 }
 
+const DATAMART_BASE_URL = 'https://datamartbackened.onrender.com/api/developer';
+const API_TIMEOUT = 8000; // 8 seconds
 
 const getApiKey = () => {
     // This key is for the external Datamart API, not Firebase
@@ -54,15 +56,30 @@ const getApiKey = () => {
     return apiKey;
 }
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), API_TIMEOUT);
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+        });
+        return response;
+    } finally {
+        clearTimeout(timeout);
+    }
+}
+
 export async function fetchBundles(network: 'TELECEL' | 'YELLO' | 'AT_PREMIUM'): Promise<DatamartBundle[]> {
     try {
         const apiKey = getApiKey();
         if (!apiKey) return [];
-        const response = await fetch(`https://datamartbackened.onrender.com/api/developer/data-packages?network=${network}`, {
+        const response = await fetchWithTimeout(`${DATAMART_BASE_URL}/data-packages?network=${network}`, {
             headers: {
                 'X-API-Key': apiKey,
             },
-            cache: 'no-store' // Fetch fresh data on each request
+            cache: 'no-store'
         });
 
         if (!response.ok) {
@@ -80,7 +97,11 @@ export async function fetchBundles(network: 'TELECEL' | 'YELLO' | 'AT_PREMIUM'):
             return [];
         }
     } catch (error) {
-        console.error(`An error occurred while fetching ${network} bundles:`, error);
+        if ((error as Error).name === 'AbortError') {
+            console.error(`Request to fetch ${network} bundles timed out.`);
+        } else {
+            console.error(`An error occurred while fetching ${network} bundles:`, error);
+        }
         return [];
     }
 }
@@ -137,8 +158,6 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
         throw new Error("DATAMART_API_KEY is not configured on the server.");
     }
 
-    // The bundleId from our app is 'NETWORK-CAPACITY', e.g., 'YELLO-5'.
-    // The API expects 'network' and 'capacity' as separate fields.
     const [network, capacity] = bundleId.split('-');
 
     if (!network || !capacity) {
@@ -147,33 +166,42 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
 
     console.log(`Attempting to deliver bundle. Phone: ${phone}, Network: ${network}, Capacity: ${capacity}GB`);
 
-    const response = await fetch('https://datamartbackened.onrender.com/api/developer/purchase', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-API-Key': apiKey,
-        },
-        body: JSON.stringify({
-            phone,
-            network,
-            capacity: `${capacity}GB`,
-        }),
-    });
+    try {
+        const response = await fetchWithTimeout(`${DATAMART_BASE_URL}/purchase`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': apiKey,
+            },
+            body: JSON.stringify({
+                phone,
+                network,
+                capacity: `${capacity}GB`,
+            }),
+        });
+        
+        const result = await response.json();
 
-    const result = await response.json();
+        if (!response.ok || result.status !== 'success') {
+            const errorMessage = result.message || 'Unknown error from DataMart API.';
+            console.error(`DataMart API Error: ${errorMessage}`, result);
+            throw new Error(`Failed to deliver bundle: ${errorMessage}`);
+        }
 
-    if (!response.ok || result.status !== 'success') {
-        const errorMessage = result.message || 'Unknown error from DataMart API.';
-        console.error(`DataMart API Error: ${errorMessage}`, result);
-        throw new Error(`Failed to deliver bundle: ${errorMessage}`);
+        console.log('Successfully initiated data bundle delivery via DataMart.', result);
+        return result;
+
+    } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+             throw new Error("The request to the data provider timed out. Please check your transaction history later.");
+        }
+        // Re-throw other errors to be caught by the webhook logic
+        throw error;
     }
-
-    console.log('Successfully initiated data bundle delivery via DataMart.', result);
-    return result;
 }
 
 
-export async function fetchWalletBalance(): Promise<number> {
+export async function fetchWalletBalance(): Promise<number | null> {
     const apiKey = getApiKey();
     if (!apiKey) {
         throw new Error("DATAMART_API_KEY is not configured on the server.");
@@ -181,21 +209,30 @@ export async function fetchWalletBalance(): Promise<number> {
 
     console.log("Fetching DataMart wallet balance...");
 
-    const response = await fetch('https://datamartbackened.onrender.com/api/developer/balance', {
-        headers: {
-            'X-API-Key': apiKey,
-        },
-        cache: 'no-store'
-    });
+    try {
+        const response = await fetchWithTimeout(`${DATAMART_BASE_URL}/balance`, {
+            headers: {
+                'X-API-Key': apiKey,
+            },
+            cache: 'no-store'
+        });
 
-    const result = await response.json();
+        const result = await response.json();
 
-    if (!response.ok || result.status !== 'success') {
-        const errorMessage = result.message || 'Unknown error fetching balance from DataMart API.';
-        console.error(`DataMart API Error: ${errorMessage}`, result);
-        throw new Error(`Failed to fetch wallet balance: ${errorMessage}`);
+        if (!response.ok || result.status !== 'success') {
+            const errorMessage = result.message || 'Unknown error fetching balance from DataMart API.';
+            console.error(`DataMart API Error: ${errorMessage}`, result);
+            throw new Error(`Failed to fetch wallet balance: ${errorMessage}`);
+        }
+
+        console.log("Successfully fetched wallet balance:", result.data.balance);
+        return parseFloat(result.data.balance);
+    } catch (error) {
+        if ((error as Error).name === 'AbortError') {
+             console.error('Request to fetch wallet balance timed out.');
+        } else {
+             console.error('An error occurred while fetching wallet balance:', error);
+        }
+        return null; // Return null on any error to allow graceful UI fallback
     }
-
-    console.log("Successfully fetched wallet balance:", result.data.balance);
-    return parseFloat(result.data.balance);
 }
