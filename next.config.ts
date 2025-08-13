@@ -42,9 +42,7 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['google-auth-library'],
-  },
+  serverExternalPackages: ['google-auth-library'],
 };
 
 export default nextConfig;
