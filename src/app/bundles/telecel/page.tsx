@@ -1,9 +1,30 @@
-
 import BundleCard from "@/components/bundle-card";
-import { fetchBundles } from "@/lib/datamart";
+import { fetchBundles, DatamartBundle } from "@/lib/datamart";
+
+const telecelCustomPrices: { [key: string]: string } = {
+  "5": "23.80",
+  "8": "37.00",
+  "10": "42.00",
+  "12": "46.00",
+  "15": "61.50",
+  "20": "80.00",
+  "25": "97.00",
+  "30": "118.00",
+  "40": "156.00",
+  "50": "196.00"
+};
 
 export default async function TelecelBundlesPage() {
-  const bundles = await fetchBundles('TELECEL');
+  const bundlesFromApi = await fetchBundles('TELECEL');
+
+  const bundles = bundlesFromApi.map((bundle: DatamartBundle) => {
+    const capacityKey = bundle.capacity;
+    const customPrice = telecelCustomPrices[capacityKey];
+    return {
+      ...bundle,
+      price: customPrice ? customPrice : bundle.price, // Use custom price if it exists
+    };
+  });
 
   return (
     <div className="bg-background">

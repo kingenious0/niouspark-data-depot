@@ -1,9 +1,37 @@
 
 import BundleCard from "@/components/bundle-card";
-import { fetchBundles } from "@/lib/datamart";
+import { fetchBundles, DatamartBundle } from "@/lib/datamart";
+
+const mtnCustomPrices: { [key: string]: string } = {
+  "1": "5.00",
+  "2": "10.50",
+  "3": "15.00",
+  "4": "20.00",
+  "5": "25.00",
+  "6": "29.00",
+  "8": "38.00",
+  "10": "46.00",
+  "15": "66.00",
+  "20": "87.00",
+  "25": "110.00",
+  "30": "132.00",
+  "40": "173.00",
+  "50": "216.00",
+  "100": "422.00"
+};
+
 
 export default async function MtnBundlesPage() {
-  const bundles = await fetchBundles('YELLO');
+  const bundlesFromApi = await fetchBundles('YELLO');
+
+  const bundles = bundlesFromApi.map((bundle: DatamartBundle) => {
+    const capacityKey = bundle.capacity;
+    const customPrice = mtnCustomPrices[capacityKey];
+    return {
+      ...bundle,
+      price: customPrice ? customPrice : bundle.price, // Use custom price if it exists
+    };
+  });
 
   return (
     <div className="bg-background">
