@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { Loader2 } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -36,7 +36,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { auth } from "@/lib/firebase";
 
 interface Bundle {
   id: string;
@@ -117,6 +124,11 @@ export default function BundleCard({ bundle }: BundleCardProps) {
   );
 }
 
+interface SavedNumber {
+    name: string;
+    number: string;
+}
+
 interface PurchaseDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -126,23 +138,88 @@ interface PurchaseDialogProps {
 function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("+233");
   const [paymentChannel, setPaymentChannel] = useState("card");
   const [loading, setLoading] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
+  // State for saved numbers
+  const [savedNumbers, setSavedNumbers] = useState<SavedNumber[]>([]);
+  const [loadingNumbers, setLoadingNumbers] = useState(false);
+  const [showAddNumber, setShowAddNumber] = useState(false);
+  const [newNumberName, setNewNumberName] = useState("");
+  const [newNumber, setNewNumber] = useState("+233");
+  const [isAddingNumber, setIsAddingNumber] = useState(false);
+
+
   useEffect(() => {
     if (user?.email) setEmail(user.email);
-  }, [user]);
+    if (isOpen && user) {
+        fetchSavedNumbers();
+    }
+  }, [user, isOpen]);
+
+  const fetchSavedNumbers = async () => {
+    setLoadingNumbers(true);
+    try {
+        const idToken = await auth.currentUser?.getIdToken();
+        const res = await fetch('/api/user/saved-numbers', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+            setSavedNumbers(data.numbers);
+            if(data.numbers.length === 0) {
+              setShowAddNumber(true); // If no numbers, show add form by default
+            } else {
+              setPhone(data.numbers[0].number); // Default to first saved number
+            }
+        }
+    } catch (error) {
+        console.error("Failed to fetch saved numbers:", error);
+    } finally {
+        setLoadingNumbers(false);
+    }
+  }
+
+  const handleAddNumber = async () => {
+    if (!newNumberName || !newNumber) {
+        toast({ title: "Error", description: "Please provide a name and number.", variant: "destructive" });
+        return;
+    }
+    setIsAddingNumber(true);
+    try {
+        const idToken = await auth.currentUser?.getIdToken();
+        const res = await fetch('/api/user/saved-numbers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+            body: JSON.stringify({ name: newNumberName, number: newNumber }),
+        });
+        const data = await res.json();
+        if(data.success) {
+            toast({ title: "Success", description: "Number saved successfully."});
+            setSavedNumbers([...savedNumbers, data.number]);
+            setPhone(data.number.number); // Select the newly added number
+            setNewNumberName("");
+            setNewNumber("+233");
+            setShowAddNumber(false);
+        } else {
+            throw new Error(data.error || "Failed to save number.");
+        }
+    } catch (error: any) {
+        toast({ title: "Error Saving Number", description: error.message, variant: "destructive" });
+    } finally {
+        setIsAddingNumber(false);
+    }
+  }
 
   const handlePrimaryActionClick = () => {
     if (paymentChannel === "mobile_money") {
         if (!phone.match(/^\+233[0-9]{9}$/)) {
             toast({
                 title: "Invalid Phone Number",
-                description: "Please enter a valid Ghana phone number starting with +233.",
+                description: "Please select or enter a valid Ghana phone number.",
                 variant: "destructive",
             });
             return;
@@ -166,6 +243,8 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       setLoading(false);
       return;
     }
+    
+    const finalPhone = paymentChannel === "mobile_money" ? phone : undefined;
 
     try {
       const res = await fetch("/api/charge-payment", {
@@ -174,7 +253,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
         body: JSON.stringify({
           reference: `NDD_${Date.now()}`,
           email,
-          phone: paymentChannel === "mobile_money" ? phone : undefined,
+          phone: finalPhone,
           bundleId: bundle.id,
           bundleName: bundle.name,
           amount: Math.round(bundle.price * 100),
@@ -223,23 +302,73 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
               Purchase {bundle.name}
             </DialogTitle>
             <DialogDescription>
-              Select your payment method and enter your details.
+              Confirm details to complete your purchase.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
                 <Label>Payment Method</Label>
-                <select
-                    value={paymentChannel}
-                    onChange={(e) => setPaymentChannel(e.target.value)}
-                    className="w-full p-2 border rounded-md bg-background"
-                >
-                    <option value="card">Card</option>
-                    <option value="mobile_money">Mobile Money</option>
-                </select>
+                <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+                    <SelectTrigger>
+                        <SelectValue placeholder="Select a payment method" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="card">Card</SelectItem>
+                        <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
+
+            {paymentChannel === "mobile_money" && (
+                <>
+                <div className="space-y-2">
+                    <Label>Phone Number</Label>
+                    {loadingNumbers ? <Loader2 className="animate-spin" /> : (
+                         <Select value={phone} onValueChange={setPhone}>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a saved number" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {savedNumbers.map(num => (
+                                    <SelectItem key={num.number} value={num.number}>{num.name} - {num.number}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                </div>
+
+                {showAddNumber ? (
+                    <div className="space-y-3 p-3 border rounded-md">
+                        <Label className="font-semibold">Add New Number</Label>
+                         <Input
+                            type="text"
+                            placeholder="Name (e.g., Mom)"
+                            value={newNumberName}
+                            onChange={(e) => setNewNumberName(e.target.value)}
+                        />
+                         <Input
+                            type="tel"
+                            placeholder="+233..."
+                            value={newNumber}
+                            onChange={(e) => setNewNumber(e.target.value)}
+                        />
+                        <div className="flex gap-2">
+                          <Button onClick={handleAddNumber} disabled={isAddingNumber} className="w-full">
+                            {isAddingNumber && <Loader2 className="animate-spin mr-2"/>} Save
+                          </Button>
+                           <Button variant="ghost" onClick={() => setShowAddNumber(false)} className="w-full">Cancel</Button>
+                        </div>
+                    </div>
+                ) : (
+                    <Button variant="outline" size="sm" onClick={() => setShowAddNumber(true)}>
+                        <UserPlus className="mr-2" /> Add a new number
+                    </Button>
+                )}
+                </>
+            )}
+
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
@@ -248,18 +377,6 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
                 placeholder="you@example.com"
               />
             </div>
-            {paymentChannel === "mobile_money" && (
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+233..."
-                />
-              </div>
-            )}
           </div>
           <DialogFooter>
             <DialogClose asChild>
