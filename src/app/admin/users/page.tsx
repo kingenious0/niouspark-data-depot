@@ -3,6 +3,10 @@ import UserManagement from "@/components/admin/user-management";
 import { adminAuth } from "@/lib/firebase-admin";
 import type { User } from "@/lib/data";
 
+// This line is crucial for Vercel. It tells Next.js to always
+// render this page dynamically on the server for each request.
+export const dynamic = 'force-dynamic';
+
 async function getAllUsers(): Promise<User[]> {
     try {
         const userRecords = await adminAuth.listUsers();
