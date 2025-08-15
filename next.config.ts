@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -42,9 +43,7 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['google-auth-library'],
-  },
+  serverExternalPackages: ['google-auth-library'],
   env: {
     NEXT_PUBLIC_SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
   }
