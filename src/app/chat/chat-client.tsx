@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useActionState, useEffect, useRef } from 'react';
@@ -62,7 +61,6 @@ export function ChatClient() {
 
   return (
     <div className="flex flex-col h-full">
-      <div ref={messagesEndRef} />
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
         {state.messages.map((message, index) => (
           <div key={index} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : 'justify-start')}>
@@ -94,10 +92,11 @@ export function ChatClient() {
             </div>
            </div>
         )}
+         <div ref={messagesEndRef} />
       </div>
 
        {state.error && (
-        <div className="p-4">
+        <div className="p-4 border-t">
           <Alert variant="destructive">
             <Terminal className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>

@@ -1,4 +1,3 @@
-
 'use server';
 /**
  * @fileOverview AI flow to analyze historical sales data.
@@ -46,6 +45,7 @@ const analysisPrompt = ai.definePrompt({
     }),
   },
   output: {schema: SalesAnalysisOutputSchema},
+  tools: [getTransactionsTool], // We still list the tool here so the prompt knows it exists
   prompt: `You are a business intelligence analyst for a data bundle company.
   Your task is to analyze the provided sales data for the last 3, 7, and 30 days.
 
