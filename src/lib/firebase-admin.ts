@@ -1,9 +1,8 @@
-
 import admin from 'firebase-admin';
 import type { AdminTransaction } from './datamart';
 
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-  throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not set. Go to your Firebase Project settings > Service accounts. Generate a new private key, then encode it to Base64. (e.g. using a site like base64encode.org) and add it to your .env.local file.');
+  throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not set. Go to your Firebase Project settings > Service accounts. Generate a new private key, then encode it to Base64. (e.g. using a site like base64encode.org) and add it to your .env file.');
 }
 
 if (!admin.apps.length) {

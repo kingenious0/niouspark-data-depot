@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -24,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { Loader2, PlusCircle, Trash2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -361,7 +360,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
                     </div>
                 ) : (
                     <Button variant="outline" size="sm" onClick={() => setShowAddNumber(true)}>
-                        <UserPlus className="mr-2" /> Add a new number
+                        <UserPlus className="mr-2 h-4 w-4" /> Add a new number
                     </Button>
                 )}
                 </>

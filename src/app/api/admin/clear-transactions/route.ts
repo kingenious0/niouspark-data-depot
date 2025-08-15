@@ -1,6 +1,12 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
+
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL;
+
+if (!SUPER_ADMIN_EMAIL) {
+    console.warn("SUPER_ADMIN_EMAIL is not set in environment variables. Destructive actions will be disabled.");
+}
+
 
 async function deleteCollection(collectionPath: string, batchSize: number) {
     const collectionRef = adminDb.collection(collectionPath);
@@ -44,14 +50,13 @@ export async function POST(request: NextRequest) {
     }
     
     const decodedToken = await adminAuth.verifyIdToken(idToken);
-    const requesterRole = decodedToken.role;
-
-    // This is a protected endpoint, only admins can call it.
-    if (requesterRole !== 'admin') {
-      return NextResponse.json({ error: "Forbidden: You do not have permission to perform this action." }, { status: 403 });
+    
+    // Check if the user is the designated Super Admin
+    if (!SUPER_ADMIN_EMAIL || decodedToken.email !== SUPER_ADMIN_EMAIL) {
+        return NextResponse.json({ error: "Forbidden: You do not have permission to perform this action." }, { status: 403 });
     }
 
-    console.log(`Admin user ${decodedToken.uid} initiated deletion of all transactions.`);
+    console.log(`Super Admin user ${decodedToken.uid} initiated deletion of all transactions.`);
     
     await deleteCollection('transactions', 100);
 

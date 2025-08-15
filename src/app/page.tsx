@@ -1,4 +1,3 @@
-
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CheckCircle, Cpu, ShieldCheck, Wifi } from 'lucide-react';
@@ -25,7 +24,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col">
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative w-full h-[60vh] md:h-[80vh] flex items-center justify-center text-center overflow-hidden">
@@ -36,7 +35,7 @@ export default function Home() {
             loop
             muted
             playsInline
-            className="absolute z-0 w-auto min-w-full min-h-full max-w-none"
+            className="absolute z-0 w-auto min-w-full min-h-full max-w-none object-cover"
           ></video>
           <div className="container mx-auto px-4 md:px-6 relative z-10 text-white">
             <div className="max-w-3xl mx-auto">

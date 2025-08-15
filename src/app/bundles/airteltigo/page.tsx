@@ -1,4 +1,3 @@
-
 import BundleCard from "@/components/bundle-card";
 import { fetchBundles } from "@/lib/datamart";
 

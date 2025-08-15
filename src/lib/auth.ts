@@ -1,4 +1,3 @@
-
 "use client";
 
 import { auth, db } from "./firebase";
@@ -9,9 +8,6 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   sendPasswordResetEmail,
-  RecaptchaVerifier,
-  signInWithPhoneNumber,
-  type ConfirmationResult,
   type User,
   GoogleAuthProvider,
   signInWithPopup,
@@ -131,40 +127,4 @@ export const updateUserProfile = async (data: { displayName?: string; photoURL?:
     } else {
         throw new Error("No user is signed in to update.");
     }
-};
-
-// --- Phone Authentication ---
-let recaptchaVerifier: RecaptchaVerifier | null = null;
-
-const getRecaptchaVerifier = (containerId: string) => {
-    if (recaptchaVerifier) {
-       return recaptchaVerifier;
-    }
-    recaptchaVerifier = new RecaptchaVerifier(auth, containerId, {
-        'size': 'invisible',
-        'callback': (response: any) => {
-            // reCAPTCHA solved.
-        }
-    });
-    return recaptchaVerifier;
-}
-
-export const verifyPhoneNumber = (phoneNumber: string, containerId: string): Promise<ConfirmationResult> => {
-    const appVerifier = getRecaptchaVerifier(containerId);
-    return signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-};
-
-export const signInWithPhone = async (confirmationResult: ConfirmationResult, verificationCode: string, displayName: string) => {
-    const userCredential = await confirmationResult.confirm(verificationCode);
-    const user = userCredential.user;
-     if (user) {
-        await updateProfile(user, { displayName });
-        await setDoc(doc(db, "users", user.uid), {
-            phoneNumber: user.phoneNumber,
-            displayName: displayName,
-            role: "customer"
-        }, { merge: true });
-        await user.getIdToken(true);
-    }
-    return userCredential;
 };

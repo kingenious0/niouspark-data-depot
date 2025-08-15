@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { Transaction } from "@/lib/datamart";
+import { format } from 'date-fns';
 
 interface OrderHistoryProps {
   orders: Transaction[];
@@ -20,8 +21,10 @@ export default function OrderHistory({ orders, minimal = false }: OrderHistoryPr
       case 'completed':
         return 'default';
       case 'pending':
+      case 'delivering':
         return 'secondary';
       case 'failed':
+      case 'delivery_failed':
       case 'abandoned':
         return 'destructive';
       default:
@@ -49,10 +52,10 @@ export default function OrderHistory({ orders, minimal = false }: OrderHistoryPr
               {!minimal && <TableCell>{order.phoneNumber || 'N/A'}</TableCell>}
               <TableCell>{order.bundleName || order.type}</TableCell>
               <TableCell>{order.amount.toFixed(2)}</TableCell>
-              {!minimal && <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>}
+              {!minimal && <TableCell>{format(new Date(order.createdAt), "PPp")}</TableCell>}
               <TableCell>
                 <Badge variant={getBadgeVariant(order.status)} className="capitalize">
-                  {order.status}
+                  {order.status.replace('_', ' ')}
                 </Badge>
               </TableCell>
             </TableRow>

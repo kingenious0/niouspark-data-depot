@@ -1,10 +1,9 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import OrderHistory from "@/components/admin/order-history";
 import SalesCard from "@/components/admin/sales-card";
-import { DollarSign, Package, CreditCard, Users, ShoppingCart, Trash2, Loader2, Wallet } from 'lucide-react';
+import { DollarSign, Package, CreditCard, Users, ShoppingCart, Trash2, Loader2, Wallet, Cpu } from 'lucide-react';
 import AovCard from "@/components/admin/aov-overview";
 import BestSellersCard from "@/components/admin/best-sellers";
 import CancellationsCard from "@/components/admin/cancellations-card";
@@ -28,6 +27,9 @@ import { auth } from "@/lib/firebase";
 import type { AdminTransaction } from "@/lib/datamart";
 import { useAuth } from "@/lib/auth";
 
+// This will be populated by Next.js at build time
+const SUPER_ADMIN_EMAIL = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
+
 export default function AdminDashboardPage() {
   const { user } = useAuth();
   const [allOrders, setAllOrders] = useState<AdminTransaction[]>([]);
@@ -35,6 +37,8 @@ export default function AdminDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+
+  const isSuperAdmin = user?.email === SUPER_ADMIN_EMAIL;
 
   useEffect(() => {
     // We check `auth.currentUser` directly because the `user` from `useAuth` might not be initialized yet
@@ -134,7 +138,7 @@ export default function AdminDashboardPage() {
 
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8">
+    <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8">
        <div className="flex flex-wrap justify-between items-center mb-8 gap-4">
         <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>
         <div className="flex gap-2 items-center flex-wrap">
@@ -145,35 +149,43 @@ export default function AdminDashboardPage() {
                 </Link>
             </Button>
             <Button asChild variant="outline">
+                <Link href="/admin/ai">
+                    <Cpu className="mr-2 h-4 w-4" />
+                    AI Suite
+                </Link>
+            </Button>
+            <Button asChild variant="outline">
                 <Link href="/admin/users">
                     <Users className="mr-2 h-4 w-4" />
                     Manage Users
                 </Link>
             </Button>
-             <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Clear All Transactions
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete all
-                    transaction history from the database.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDeleteTransactions} disabled={isDeleting}>
-                    {isDeleting && <Loader2 className="animate-spin mr-2"/>}
-                    Yes, delete everything
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+             {isSuperAdmin && (
+                <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear All Transactions
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete all
+                        transaction history from the database.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteTransactions} disabled={isDeleting}>
+                        {isDeleting && <Loader2 className="animate-spin mr-2"/>}
+                        Yes, delete everything
+                    </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+                </AlertDialog>
+             )}
         </div>
       </div>
        {loading ? <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> <p className="mt-2 text-muted-foreground">Loading dashboard data...</p></div> : (

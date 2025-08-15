@@ -1,4 +1,3 @@
-
 import UserManagement from "@/components/admin/user-management";
 import { adminAuth } from "@/lib/firebase-admin";
 import type { User } from "@/lib/data";

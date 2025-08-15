@@ -67,4 +67,7 @@
     @apply bg-background text-foreground;
     color-scheme: dark;
   }
+  html, body, #__next {
+    @apply h-full;
+  }
 }

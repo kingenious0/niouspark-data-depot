@@ -1,4 +1,3 @@
-
 export type Bundle = {
   id: string;
   name: string;

@@ -1,4 +1,3 @@
-
 "use client";
 
 import * as React from "react";
@@ -21,21 +20,40 @@ import {
 import type { User } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import { auth } from "@/lib/firebase";
+import { Button } from "../ui/button";
+import { Loader2, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useAuth } from "@/lib/auth";
 
 interface UserManagementProps {
   initialUsers: User[];
 }
 
+const SUPER_ADMIN_EMAIL = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
+
 export default function UserManagement({ initialUsers }: UserManagementProps) {
   const [users, setUsers] = React.useState(initialUsers);
   const [loading, setLoading] = React.useState<string | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
   const { toast } = useToast();
-  const currentUser = auth.currentUser;
+  const { user: currentUser } = useAuth();
+  
+  const isSuperAdmin = currentUser?.email === SUPER_ADMIN_EMAIL;
 
   const handleRoleChange = async (userId: string, newRole: "admin" | "customer") => {
     setLoading(userId);
     try {
-        const idToken = await currentUser?.getIdToken();
+        const idToken = await auth.currentUser?.getIdToken();
         if (!idToken) {
             throw new Error("Authentication token not found.");
         }
@@ -75,6 +93,31 @@ export default function UserManagement({ initialUsers }: UserManagementProps) {
         setLoading(null);
     }
   };
+  
+  const handleDeleteUser = async (userId: string) => {
+    setDeletingId(userId);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) throw new Error("Authentication required.");
+
+      const res = await fetch('/api/admin/delete-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify({ userIdToDelete: userId }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to delete user.');
+
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      toast({ title: 'User Deleted', description: 'The user has been successfully removed.' });
+
+    } catch (error: any) {
+      toast({ title: 'Deletion Failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   return (
     <div className="rounded-lg border">
@@ -84,6 +127,7 @@ export default function UserManagement({ initialUsers }: UserManagementProps) {
             <TableHead>User</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Role</TableHead>
+            {isSuperAdmin && <TableHead className="text-right">Actions</TableHead>}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -110,7 +154,7 @@ export default function UserManagement({ initialUsers }: UserManagementProps) {
                   onValueChange={(value: "admin" | "customer") =>
                     handleRoleChange(user.id, value)
                   }
-                  disabled={loading === user.id || user.id === currentUser?.uid}
+                  disabled={loading === user.id || !isSuperAdmin || user.id === currentUser?.uid}
                 >
                   <SelectTrigger className="w-[120px]">
                     <SelectValue placeholder="Select role" />
@@ -121,6 +165,33 @@ export default function UserManagement({ initialUsers }: UserManagementProps) {
                   </SelectContent>
                 </Select>
               </TableCell>
+              {isSuperAdmin && (
+                 <TableCell className="text-right">
+                    {user.id !== currentUser?.uid && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={deletingId === user.id}>
+                                    {deletingId === user.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Trash2 className="h-4 w-4 text-destructive"/>}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete User: {user.name}?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This will permanently delete the user and all their associated data. This action cannot be undone.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDeleteUser(user.id)} className="bg-destructive hover:bg-destructive/90">
+                                        Yes, delete user
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>

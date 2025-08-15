@@ -1,10 +1,9 @@
-
 "use client";
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { Menu, User, Shield, LogOut, LogIn, Loader2 } from "lucide-react";
+import { Menu, LogOut, Loader2, Cpu, Shield, MessageCircle } from "lucide-react";
 import Logo from "./logo";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -13,10 +12,20 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "./theme-toggle";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/bundles", label: "Bundles" },
+  { href: "/chat", label: "AI Chat" },
 ];
 
 const Header = () => {
@@ -46,6 +55,15 @@ const Header = () => {
       });
     }
   };
+  
+  const getAvatarFallback = (name: string | null | undefined) => {
+    if (!name) return "U";
+    const parts = name.split(" ");
+    if (parts.length > 1) {
+      return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+    }
+    return name[0].toUpperCase();
+  }
 
   const MobileNavContent = () => (
     <>
@@ -55,7 +73,7 @@ const Header = () => {
           <Logo />
         </Link>
         <nav className="flex flex-col gap-4">
-          {[...navLinks, ...(user ? [{ href: "/account", label: "Account" }] : [])].map((link) => (
+          {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -75,18 +93,7 @@ const Header = () => {
                 pathname.startsWith("/admin") ? "text-primary" : ""
               )}
             >
-              Admin
-            </Link>
-          )}
-           {isAdmin && (
-            <Link
-              href="/predict"
-              className={cn(
-                "text-lg font-medium transition-colors hover:text-primary",
-                pathname.startsWith("/predict") ? "text-primary" : ""
-              )}
-            >
-              Predict
+              Admin Dashboard
             </Link>
           )}
         </nav>
@@ -115,7 +122,7 @@ const Header = () => {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur-sm">
+    <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur-sm flex-shrink-0">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2">
           <Logo />
@@ -130,62 +137,63 @@ const Header = () => {
                 pathname === link.href ? "text-primary" : "text-muted-foreground"
               )}
             >
-              {link.label}
+              {link.label === 'AI Chat' ? (
+                <span className="flex items-center gap-1">
+                  <MessageCircle className="h-4 w-4" /> {link.label}
+                </span>
+              ) : (
+                link.label
+              )}
             </Link>
           ))}
-          {isClient && user && (
-             <Link
-              href="/account"
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname.startsWith('/account') ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              Account
-            </Link>
-           )}
-          {isClient && isAdmin && (
-            <>
-            <Link
-              href="/admin"
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname.startsWith("/admin") ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-               <Shield className="mr-2 h-4 w-4 inline-block" />
-              Admin
-            </Link>
-            <Link
-              href="/predict"
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname.startsWith("/predict") ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-               AI Predict
-            </Link>
-            </>
-          )}
         </nav>
         
-        <div className="flex items-center gap-2">
-             {isClient ? (
-              <div className="flex items-center gap-2">
-                <div className="hidden md:flex items-center gap-2">
+         <div className="flex items-center gap-2">
+            {isClient ? (
+              <>
+                <div className="hidden md:flex items-center gap-4">
                   {loading ? (
                     <div className="w-20 h-9 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
                   ) : (
                     <>
                       {user ? (
-                        <Button variant="ghost" size="sm" onClick={handleLogout}>
-                          <LogOut className="mr-2 h-4 w-4" />
-                          Logout
-                        </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                                    <Avatar>
+                                        <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
+                                        <AvatarFallback>{getAvatarFallback(user.displayName)}</AvatarFallback>
+                                    </Avatar>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="w-56" align="end" forceMount>
+                                <DropdownMenuLabel className="font-normal">
+                                    <div className="flex flex-col space-y-1">
+                                        <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                                    </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => router.push('/account')}>
+                                    Account
+                                </DropdownMenuItem>
+                                {isAdmin && (
+                                    <DropdownMenuItem onClick={() => router.push('/admin')}>
+                                        <Shield className="mr-2 h-4 w-4" />
+                                        Admin
+                                    </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={handleLogout}>
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    <span>Log out</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                       ) : (
                         <>
                           <Button asChild variant="ghost" size="sm">
-                            <Link href="/login"> <LogIn className="mr-2 h-4 w-4" /> Login</Link>
+                            <Link href="/login">Login</Link>
                           </Button>
                           <Button asChild size="sm">
                             <Link href="/signup">Sign Up</Link>
@@ -209,9 +217,9 @@ const Header = () => {
                     </SheetContent>
                   </Sheet>
                 </div>
-              </div>
+              </>
             ) : (
-                <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-2">
                     <Skeleton className="hidden md:block h-9 w-20" />
                     <Skeleton className="hidden md:block h-9 w-20" />
                     <Skeleton className="h-10 w-10" />

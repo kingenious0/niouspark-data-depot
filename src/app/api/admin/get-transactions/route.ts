@@ -1,4 +1,3 @@
-
 import { NextResponse } from 'next/server';
 import { fetchAllTransactionsFromAdmin } from '@/lib/firebase-admin';
 import { adminAuth } from '@/lib/firebase-admin';
@@ -17,10 +16,7 @@ export async function GET() {
          return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 403 });
       }
     } else {
-        // This is a temporary measure for the admin dashboard which is a client component
-        // and cannot send auth headers in its initial fetch. In a production app,
-        // you'd want to secure this more robustly.
-        // For now, we allow the fetch to proceed but rely on page-level security.
+        return NextResponse.json({ success: false, error: 'Unauthorized: No token' }, { status: 401 });
     }
 
     const transactions = await fetchAllTransactionsFromAdmin();

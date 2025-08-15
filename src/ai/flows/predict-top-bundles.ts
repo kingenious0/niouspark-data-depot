@@ -8,9 +8,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {adminDb} from '@/lib/firebase-admin';
-import {Timestamp} from 'firebase-admin/firestore';
-import type {AdminTransaction} from '@/lib/datamart';
+import { getTransactionsTool } from '@/ai/tools/get-transactions-tool';
 
 // Define the output schema for one analysis period
 const PeriodAnalysisSchema = z.object({
@@ -35,80 +33,6 @@ const SalesAnalysisOutputSchema = z.object({
 });
 export type SalesAnalysisOutput = z.infer<typeof SalesAnalysisOutputSchema>;
 
-// Tool to fetch transactions from Firestore
-const getTransactionsTool = ai.defineTool(
-  {
-    name: 'getTransactions',
-    description:
-      'Fetches transaction records from the database for a given number of past days.',
-    inputSchema: z.object({
-      days: z
-        .number()
-        .describe('The number of past days to fetch transactions for.'),
-    }),
-    outputSchema: z.array(
-      z.object({
-        _id: z.string(),
-        amount: z.number(),
-        status: z.string(),
-        reference: z.string(),
-        createdAt: z.string(),
-        bundleName: z.string().optional(),
-      })
-    ),
-  },
-  async ({days}) => {
-    console.log(`Fetching transactions for the last ${days} days.`);
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    
-    // Fetch all transactions and filter in-memory to avoid index issues.
-    const snapshot = await adminDb
-      .collection('transactions')
-      .orderBy('createdAt', 'desc')
-      .get();
-      
-    const allTransactions = snapshot.docs.map(doc => {
-        const data = doc.data();
-        let createdAt = new Date(); // Default to now if not available
-        if (data.createdAt) {
-          if (data.createdAt.toDate) {
-            createdAt = data.createdAt.toDate();
-          } else if (typeof data.createdAt === 'string') {
-            createdAt = new Date(data.createdAt);
-          }
-        }
-        return {
-          _id: doc.id,
-          amount: data.amount,
-          status: data.status,
-          reference: data.reference,
-          createdAt: createdAt,
-          bundleName: data.bundleName,
-          docData: data,
-        };
-      });
-      
-    const filteredDocs = allTransactions.filter(t => t.createdAt >= startDate);
-
-    if (filteredDocs.length === 0) {
-      return [];
-    }
-    
-    const transactions: Partial<AdminTransaction>[] = filteredDocs.map(
-      t => ({
-        _id: t._id,
-        amount: t.amount,
-        status: t.status,
-        reference: t.reference,
-        createdAt: t.createdAt.toISOString(),
-        bundleName: t.bundleName,
-      })
-    );
-    
-    return transactions as any;
-  }
-);
 
 // Define the main prompt for analysis
 const analysisPrompt = ai.definePrompt({
@@ -121,7 +45,7 @@ const analysisPrompt = ai.definePrompt({
     }),
   },
   output: {schema: SalesAnalysisOutputSchema},
-  tools: [getTransactionsTool],
+  tools: [getTransactionsTool], // We still list the tool here so the prompt knows it exists
   prompt: `You are a business intelligence analyst for a data bundle company.
   Your task is to analyze the provided sales data for the last 3, 7, and 30 days.
 
@@ -150,7 +74,7 @@ const analyzeSalesFlow = ai.defineFlow(
     outputSchema: SalesAnalysisOutputSchema,
   },
   async () => {
-    // Fetch data for all periods in parallel
+    // Fetch data for all periods in parallel using the imported tool
     const [transactions3days, transactions7days, transactions30days] =
       await Promise.all([
         getTransactionsTool({days: 3}),

@@ -1,4 +1,3 @@
-
 "use client"
 
 import {
@@ -8,7 +7,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { DollarSign } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, ResponsiveContainer } from "recharts"
 import DashboardCard from "./dashboard-card"
 
 const chartData = [
@@ -43,7 +42,7 @@ export default function SalesCard({ value }: SalesCardProps) {
         className="md:col-span-2"
     >
       <div className="h-32 -ml-4">
-        <ChartContainer config={chartConfig} className="w-full h-full">
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart
             accessibilityLayer
             data={chartData}
@@ -64,7 +63,7 @@ export default function SalesCard({ value }: SalesCardProps) {
             />
             <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
           </BarChart>
-        </ChartContainer>
+        </ResponsiveContainer>
       </div>
     </DashboardCard>
   )

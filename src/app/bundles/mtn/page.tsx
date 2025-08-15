@@ -1,4 +1,3 @@
-
 import BundleCard from "@/components/bundle-card";
 import { fetchBundles, DatamartBundle } from "@/lib/datamart";
 
@@ -51,7 +50,7 @@ export default async function MtnBundlesPage() {
                 name: `${bundle.capacity}GB Bundle`,
                 data: `${bundle.mb} MB`,
                 price: parseFloat(bundle.price),
-                validity: '30 Days'
+                validity: 'Non-Expiry'
             }} />
           ))}
         </div>

@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
@@ -56,14 +55,23 @@ export async function POST(request: NextRequest) {
         const newNumber = { name, number };
 
         // Use FieldValue.arrayUnion to add the new number, avoiding duplicates of the exact same object
-        await userDocRef.update({
+        await userDocRef.set({
             savedNumbers: FieldValue.arrayUnion(newNumber)
-        });
+        }, { merge: true });
 
         return NextResponse.json({ success: true, message: "Number saved successfully.", number: newNumber });
 
     } catch (error: any) {
         console.error("Error saving number:", error);
+        if (error.code === 'firestore/not-found') {
+            // Document doesn't exist, so we create it with the number
+            const userId = await getUserIdFromToken(request);
+            const { name, number } = await request.json();
+            const newNumber = { name, number };
+            const userDocRef = adminDb.collection('users').doc(userId);
+            await userDocRef.set({ savedNumbers: [newNumber] });
+            return NextResponse.json({ success: true, message: "Number saved successfully.", number: newNumber });
+        }
         if (error.message.includes("Unauthorized")) {
              return NextResponse.json({ success: false, error: error.message }, { status: 401 });
         }
