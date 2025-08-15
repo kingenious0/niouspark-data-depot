@@ -12,6 +12,7 @@ import { useAuth, logout } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "./theme-toggle";
 import { useState, useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -167,44 +168,55 @@ const Header = () => {
             </>
           )}
         </nav>
+        
         <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-2">
-            {!isClient || loading ? (
-                <div className="w-20 h-9"><Loader2 className="h-6 w-6 animate-spin" /></div>
+             {isClient ? (
+              <div className="flex items-center gap-2">
+                <div className="hidden md:flex items-center gap-2">
+                  {loading ? (
+                    <div className="w-20 h-9 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+                  ) : (
+                    <>
+                      {user ? (
+                        <Button variant="ghost" size="sm" onClick={handleLogout}>
+                          <LogOut className="mr-2 h-4 w-4" />
+                          Logout
+                        </Button>
+                      ) : (
+                        <>
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href="/login"> <LogIn className="mr-2 h-4 w-4" /> Login</Link>
+                          </Button>
+                          <Button asChild size="sm">
+                            <Link href="/signup">Sign Up</Link>
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+                <ThemeToggle />
+                <div className="md:hidden">
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" size="icon">
+                        <Menu className="h-6 w-6" />
+                        <span className="sr-only">Open menu</span>
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="right" className="p-0">
+                      <MobileNavContent />
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              </div>
             ) : (
-                <>
-                {user ? (
-                <Button variant="ghost" size="sm" onClick={handleLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
-                </Button>
-                ) : (
-                <>
-                    <Button asChild variant="ghost" size="sm">
-                    <Link href="/login"> <LogIn className="mr-2 h-4 w-4" /> Login</Link>
-                    </Button>
-                    <Button asChild size="sm">
-                    <Link href="/signup">Sign Up</Link>
-                    </Button>
-                </>
-                )}
-                </>
+                <div className="flex items-center gap-2">
+                    <Skeleton className="hidden md:block h-9 w-20" />
+                    <Skeleton className="hidden md:block h-9 w-20" />
+                    <Skeleton className="h-10 w-10" />
+                 </div>
             )}
-            </div>
-             <ThemeToggle />
-            <div className="md:hidden">
-            <Sheet>
-                <SheetTrigger asChild>
-                <Button variant="outline" size="icon">
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">Open menu</span>
-                </Button>
-                </SheetTrigger>
-                <SheetContent side="right" className="p-0">
-                {isClient && <MobileNavContent />}
-                </SheetContent>
-            </Sheet>
-            </div>
         </div>
       </div>
     </header>

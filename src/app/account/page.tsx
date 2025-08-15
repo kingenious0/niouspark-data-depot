@@ -1,4 +1,3 @@
-
 "use client";
 
 import { ProfileForm } from "@/components/account/profile-form";
