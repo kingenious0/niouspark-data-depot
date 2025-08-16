@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { getSalesAnalysis } from "@/app/admin/ai/actions"; // Updated import
+import { getSalesAnalysis } from '@/app/admin/ai/actions';
 import { Button } from "@/components/ui/button";
 import {
   Card,

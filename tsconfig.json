@@ -8,14 +8,19 @@
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node16", // Changed from "bundler"
+    "moduleResolution": "node16",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "baseUrl": ".", // Added this
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/app/admin/ai/actions": ["./src/app/admin/ai/actions.ts"],
+      "@/app/chat/actions": ["./src/app/chat/actions.ts"],
+      "@/ai/*": ["./src/ai/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"]
     },
     "plugins": [{"name": "next"}]
   },
