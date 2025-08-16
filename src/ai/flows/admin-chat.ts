@@ -8,7 +8,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { getTransactionsTool } from '@/ai/tools/get-transactions-tool';
-import { getUsersTool } from '@/ai/tools/get-user-stats-tool';
+import { getUsersTool } from '@/ai/tools/get-user-stats-tools';
 
 const SystemPrompt = `You are a Senior Business Analyst AI for Niouspark Data Depot.
 Your name is Niouspark Smart Analyst.
