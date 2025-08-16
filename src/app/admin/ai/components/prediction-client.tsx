@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { getSalesAnalysis } from '../../actions';
+import { getSalesAnalysis } from '../actions';
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +14,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Lightbulb, Loader2, CalendarDays, Hourglass } from "lucide-react";
 
+console.log('Resolved path:', require.resolve('../actions'));
 const initialState = {
   data: null,
   error: null,
