@@ -1,3 +1,5 @@
+// src/app/admin/ai/page.tsx
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminChatClient } from "./components/admin-chat-client";
 import { PredictionClient } from "./components/prediction-client";
@@ -6,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function AdminAIPage() {
   return (
-    <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8">
+    <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8 h-full">
       <Tabs defaultValue="chat" className="flex-1 flex flex-col">
         <div className="flex-shrink-0">
           <h1 className="text-2xl font-bold">AI Suite</h1>
@@ -27,14 +29,16 @@ export default function AdminAIPage() {
         
         <TabsContent value="chat" className="flex-1 flex flex-col mt-4">
           <Card className="flex-grow flex flex-col overflow-hidden">
-             <CardContent className="p-0 flex-1">
+             <CardContent className="p-0 flex-1 h-full">
                 <AdminChatClient />
              </CardContent>
           </Card>
         </TabsContent>
         
-        <TabsContent value="predict" className="flex-1 mt-4">
-           <PredictionClient />
+        <TabsContent value="predict" className="flex-1 flex flex-col mt-4">
+          <div className="flex-grow overflow-auto">
+             <PredictionClient />
+          </div>
         </TabsContent>
       </Tabs>
     </div>
