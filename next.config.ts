@@ -42,8 +42,9 @@ const nextConfig: NextConfig = {
       }
     ],
   },
+  serverExternalPackages: ['google-auth-library'], // Moved outside of experimental
   experimental: {
-    serverComponentsExternalPackages: ['google-auth-library'],
+    // Keep other experimental flags here if you have any
   },
   env: {
     NEXT_PUBLIC_SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
