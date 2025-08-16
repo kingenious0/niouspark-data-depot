@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
-import { continueConversation, ChatState } from '@/app/chat/actions'; // Changed from './actions'
+import { continueConversation, ChatState } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bot, Loader2, Send, User, Terminal } from 'lucide-react';
