@@ -8,7 +8,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { getTransactionsTool } from '@/ai/tools/get-transactions-tool';
+import { getTransactionsTool } from '@/ai/tools/get-transactions-tools';
 
 // Define the output schema for one analysis period
 const PeriodAnalysisSchema = z.object({

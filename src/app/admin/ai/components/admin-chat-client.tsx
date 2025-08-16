@@ -1,10 +1,15 @@
-// src/app/admin/ai/components/admin-chat-client.tsx
-
 'use client';
 
 import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
 import { useFormStatus } from 'react-dom';
-import { continueAdminConversation, ChatState, ChatSession, getChatSessions, getChatMessages, ChatMessage } from '@/app/admin/ai/actions';
+import { 
+  continueAdminConversation, 
+  ChatState, 
+  ChatSession, 
+  getChatSessions, 
+  getChatMessages, 
+  ChatMessage 
+} from '@/app/admin/ai/actions'; // Updated to absolute path
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bot, Loader2, Send, User, Terminal, MessageSquarePlus, X, History } from 'lucide-react';
@@ -86,7 +91,6 @@ export function AdminChatClient() {
         viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
     }
   }, [messages, isPending]);
-
 
   const handleFormAction = (formData: FormData) => {
     if (!formData.get('message')?.toString().trim()) return;

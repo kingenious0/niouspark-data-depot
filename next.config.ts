@@ -25,21 +25,24 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  serverExternalPackages: ['google-auth-library'],
+  serverExternalPackages: [
+    'google-auth-library',
+    'mongoose', // Moved from experimental
+    '@opentelemetry/winston-transport' // Added for OpenTelemetry
+  ],
   experimental: {
-    serverActions: true, // Required for your chat/prediction actions
-    serverComponentsExternalPackages: ['mongoose'], // Add if using MongoDB
+    serverActions: true,
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      handlebars: 'handlebars/dist/cjs/handlebars.js'
+    };
+    return config;
   },
   env: {
     NEXT_PUBLIC_SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
-  },
-  // Remove these in production (keep only for local debugging)
-  typescript: {
-    ignoreBuildErrors: false, // Set to false to catch TypeScript errors
-  },
-  eslint: {
-    ignoreDuringBuilds: false, // Set to false to catch ESLint errors
-  },
+  }
 };
 
 export default nextConfig;
