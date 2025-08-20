@@ -31,7 +31,7 @@ const nextConfig: NextConfig = {
     '@opentelemetry/winston-transport' // Added for OpenTelemetry
   ],
   experimental: {
-    serverActions: true,
+    serverActions: {}, // Changed from `true` to an empty object
   },
   webpack: (config) => {
     config.resolve.alias = {
