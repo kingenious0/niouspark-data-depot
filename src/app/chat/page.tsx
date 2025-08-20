@@ -1,7 +1,9 @@
+"use client";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChatClient } from "./chat-client";
 
-export default function ChatPage() {
+export function ChatPageClient() {
   return (
     <div className="container mx-auto py-10 px-0 md:px-6 h-full">
       <Card className="h-full shadow-2xl flex flex-col">
