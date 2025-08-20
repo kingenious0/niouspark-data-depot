@@ -13,8 +13,159 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { auth } from '@/lib/firebase';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
-import { continueAdminConversation, type ChatState, type ChatSession, getChatSessions, getChatMessages, type ChatMessage } from '@/app/admin/ai/actions';
+import { adminChat, type AdminChatInput } from '@/ai/flows/admin-chat';
+import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { FieldValue, Timestamp } from 'firebase-admin/firestore';
 
+
+// --- SERVER ACTIONS (moved directly into the component file) ---
+
+interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+interface ChatSession {
+    id: string;
+    title: string;
+    updatedAt: string;
+}
+
+interface ChatState {
+    chatId: string | null;
+    messages: ChatMessage[];
+    newSession?: ChatSession;
+    error?: string;
+}
+
+async function getAdminUid(authHeader?: string | null): Promise<string> {
+    if (!authHeader) throw new Error("Unauthorized");
+    const idToken = authHeader.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    if (decodedToken.role !== 'admin') throw new Error("Forbidden");
+    return decodedToken.uid;
+}
+
+async function getChatSessions(authHeader: string): Promise<ChatSession[]> {
+    try {
+        const adminId = await getAdminUid(authHeader);
+        const snapshot = await adminDb.collection('adminChats')
+            .where('adminId', '==', adminId)
+            .orderBy('updatedAt', 'desc')
+            .limit(50)
+            .get();
+        
+        if (snapshot.empty) return [];
+
+        return snapshot.docs.map(doc => ({
+            id: doc.id,
+            title: doc.data().title || 'Untitled Chat',
+            updatedAt: (doc.data().updatedAt as Timestamp).toDate().toISOString()
+        }));
+    } catch (e: any) {
+        console.error("Error getting chat sessions:", e);
+        return [];
+    }
+}
+
+async function getChatMessages(chatId: string, authHeader: string): Promise<ChatMessage[]> {
+    try {
+        const adminId = await getAdminUid(authHeader);
+        const docRef = adminDb.collection('adminChats').doc(chatId);
+        const docSnap = await docRef.get();
+
+        if (!docSnap.exists || docSnap.data()?.adminId !== adminId) {
+            throw new Error("Chat not found or access denied");
+        }
+        return docSnap.data()?.messages || [];
+    } catch (e: any) {
+        console.error(`Error getting messages for chat ${chatId}:`, e);
+        return [];
+    }
+}
+
+async function continueAdminConversation(
+  previousState: ChatState,
+  formData: FormData
+): Promise<ChatState> {
+  const userInput = formData.get('message') as string;
+  const chatId = formData.get('chatId') as string | null;
+  const authHeader = formData.get('authHeader') as string;
+  const currentMessages = JSON.parse(formData.get('messages') as string || '[]') as ChatMessage[];
+
+  if (!userInput) {
+    return { ...previousState, error: undefined, newSession: undefined };
+  }
+   if (!authHeader) {
+    return { ...previousState, error: "Authentication token missing.", newSession: undefined };
+  }
+
+  const adminId = await getAdminUid(authHeader);
+  const userMessage: ChatMessage = { role: 'user', content: userInput };
+  const newHistoryForAI: AdminChatInput = [...currentMessages, userMessage];
+
+  let currentChatId = chatId;
+  let newChatCreated = false;
+  let newSession: ChatSession | undefined = undefined;
+
+  try {
+    if (!currentChatId) {
+      newChatCreated = true;
+      const docRef = await adminDb.collection('adminChats').add({
+        adminId,
+        title: `Chat started on ${new Date().toLocaleDateString()}`,
+        messages: [userMessage],
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      });
+      currentChatId = docRef.id;
+    } else {
+      const docRef = adminDb.collection('adminChats').doc(currentChatId);
+      await docRef.update({
+        messages: FieldValue.arrayUnion(userMessage),
+        updatedAt: Timestamp.now(),
+      });
+    }
+
+    const aiResponse = await adminChat(newHistoryForAI, newChatCreated);
+    const aiMessage: ChatMessage = { role: 'assistant', content: aiResponse.text };
+
+    const docRef = adminDb.collection('adminChats').doc(currentChatId!);
+    const updatePayload: { [key: string]: any } = {
+        messages: FieldValue.arrayUnion(aiMessage),
+        updatedAt: Timestamp.now(),
+    };
+    
+    if (newChatCreated && aiResponse.title) {
+        updatePayload.title = aiResponse.title;
+        newSession = {
+            id: currentChatId!,
+            title: aiResponse.title,
+            updatedAt: new Date().toISOString()
+        }
+    }
+    await docRef.update(updatePayload);
+
+    return {
+      chatId: currentChatId,
+      messages: [...newHistoryForAI, aiMessage],
+      newSession: newSession,
+      error: undefined,
+    };
+  } catch (e: any) {
+    console.error("Error in admin conversation action:", e);
+    const errorMessage = e.message || "An unexpected error occurred.";
+    return {
+        chatId: currentChatId,
+        messages: newHistoryForAI,
+        error: errorMessage,
+        newSession: undefined
+    };
+  }
+}
+
+
+// --- CLIENT COMPONENT ---
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -52,17 +203,11 @@ export function AdminChatClient() {
 
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
-  // Firebase token reactivity
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (user) => {
       if (user) {
-        try {
-          const token = await user.getIdToken();
-          setAuthToken(token || null);
-        } catch (err) {
-          console.error('Error fetching auth token:', err);
-          setAuthToken(null);
-        }
+        const token = await user.getIdToken();
+        setAuthToken(token || null);
       } else {
         setAuthToken(null);
       }
@@ -117,7 +262,7 @@ export function AdminChatClient() {
       setCurrentChatId(chatId);
       setMessages(fetchedMessages.length > 0 ? fetchedMessages : []);
       setError(undefined);
-      setSidebarOpen(false); // close on mobile after selecting
+      setSidebarOpen(false);
     });
   };
 
@@ -130,7 +275,6 @@ export function AdminChatClient() {
 
   return (
     <div className="flex h-full relative">
-      {/* Sidebar Backdrop (mobile) */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-20 md:hidden"
@@ -138,7 +282,6 @@ export function AdminChatClient() {
         />
       )}
 
-      {/* History Sidebar */}
       <div
         className={cn(
           "bg-muted/40 border-r flex flex-col w-64 z-30 md:static md:translate-x-0 md:z-0 transition-transform",
@@ -177,9 +320,7 @@ export function AdminChatClient() {
         </div>
       </div>
 
-      {/* Main Chat Panel */}
       <div className="flex flex-col flex-1">
-        {/* Chat header for mobile toggle */}
         <div className="p-2 border-b flex items-center gap-2 md:hidden">
           <Button size="icon" variant="ghost" onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5" />
@@ -187,15 +328,12 @@ export function AdminChatClient() {
           <h2 className="font-semibold">Business Analyst Chat</h2>
         </div>
 
-        {/* Scrollable messages */}
         <div ref={viewportRef} className="flex-1 min-h-0 overflow-y-auto p-4">
           <div className="space-y-6 pb-4">
             {isHistoryLoading && messages.length <= 1 ? (
               <div className="flex items-start gap-4">
                 <Avatar className="h-10 w-10 border-2 border-primary">
-                  <AvatarFallback>
-                    <Bot />
-                  </AvatarFallback>
+                  <AvatarFallback><Bot /></AvatarFallback>
                 </Avatar>
                 <div className="max-w-lg p-4 rounded-xl bg-muted flex items-center">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -212,9 +350,7 @@ export function AdminChatClient() {
                 >
                   {message.role === 'assistant' && (
                     <Avatar className="h-10 w-10 border-2 border-primary">
-                      <AvatarFallback>
-                        <Bot />
-                      </AvatarFallback>
+                      <AvatarFallback><Bot /></AvatarFallback>
                     </Avatar>
                   )}
                   <div
@@ -231,9 +367,7 @@ export function AdminChatClient() {
                   </div>
                   {message.role === 'user' && (
                     <Avatar className="h-10 w-10">
-                      <AvatarFallback>
-                        <User />
-                      </AvatarFallback>
+                      <AvatarFallback><User /></AvatarFallback>
                     </Avatar>
                   )}
                 </div>
@@ -242,9 +376,7 @@ export function AdminChatClient() {
             {isPending && (
               <div className="flex items-start gap-4">
                 <Avatar className="h-10 w-10 border-2 border-primary">
-                  <AvatarFallback>
-                    <Bot />
-                  </AvatarFallback>
+                  <AvatarFallback><Bot /></AvatarFallback>
                 </Avatar>
                 <div className="max-w-lg p-4 rounded-xl bg-muted flex items-center">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -254,7 +386,6 @@ export function AdminChatClient() {
           </div>
         </div>
 
-        {/* Input form pinned */}
         <div className="flex-shrink-0 border-t bg-background">
           {error && (
             <div className="p-4 border-b relative">
