@@ -1,8 +1,8 @@
+
 "use client";
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { getSalesAnalysis } from "../actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Lightbulb, Loader2, CalendarDays, Hourglass } from "lucide-react";
+import { getSalesAnalysis, type SalesAnalysisState } from "@/app/admin/ai/actions";
 
-const initialState = {
+
+const initialState: SalesAnalysisState = {
   data: null,
   error: null,
 };
