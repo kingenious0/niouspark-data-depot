@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { getSalesAnalysis } from '@/app/admin/ai/actions';
+import { analyzeSalesData, type SalesAnalysisOutput } from "@/ai/flows/predict-top-bundles";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,7 +14,30 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Lightbulb, Loader2, CalendarDays, Hourglass } from "lucide-react";
 
-const initialState = {
+// --- Server Action Logic ---
+// This logic is now part of the component file to avoid import issues.
+
+export type SalesAnalysisState = {
+  data: SalesAnalysisOutput | null;
+  error: string | null;
+};
+
+async function getSalesAnalysis(
+  prevState: SalesAnalysisState,
+  formData: FormData
+): Promise<SalesAnalysisState> {
+  try {
+    const result = await analyzeSalesData();
+    return { data: result, error: null };
+  } catch (e: any) {
+    console.error("Error getting sales analysis:", e);
+    return { data: null, error: e.message || "An unexpected error occurred." };
+  }
+}
+
+// --- Component ---
+
+const initialState: SalesAnalysisState = {
   data: null,
   error: null,
 };
@@ -87,6 +110,7 @@ function PeriodAnalysisCard({ title, data }: PeriodAnalysisProps) {
         </Card>
     )
 }
+
 
 export function PredictionClient() {
   const [state, formAction] = useActionState(getSalesAnalysis, initialState);

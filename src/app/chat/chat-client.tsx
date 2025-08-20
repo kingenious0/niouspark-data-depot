@@ -2,13 +2,51 @@
 
 import { useActionState, useEffect, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
-import { continueConversation, ChatState } from '@/app/chat/actions';
+import { chat } from "@/ai/flows/chat";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bot, Loader2, Send, User, Terminal } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+
+// --- Server Action Logic ---
+// This logic is now part of the component file to avoid import issues.
+
+export interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+export interface ChatState {
+    messages: ChatMessage[];
+    error?: string;
+}
+
+async function continueConversation(
+  previousState: ChatState,
+  formData: FormData
+): Promise<ChatState> {
+  const userInput = formData.get('message') as string;
+  if (!userInput) {
+    return { ...previousState, error: "Message cannot be empty." };
+  }
+  
+  const userMessage: ChatMessage = { role: 'user', content: userInput };
+  const newHistory = [...previousState.messages, userMessage];
+
+  try {
+    const aiResponse = await chat(userInput);
+    const aiMessage: ChatMessage = { role: 'assistant', content: aiResponse };
+    return { messages: [...newHistory, aiMessage], error: undefined };
+  } catch (e: any) {
+    console.error("Error continuing conversation:", e);
+    const errorMessage = e.message || "An unexpected error occurred.";
+    return { messages: newHistory, error: errorMessage };
+  }
+}
+
+// --- Component ---
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -25,8 +63,8 @@ const getInitialState = (): ChatState => {
         if (savedMessages) {
             try {
                 const messages = JSON.parse(savedMessages);
-                if (Array.isArray(messages)) {
-                    return { messages };
+                if (Array.isArray(messages) && messages.length > 0) {
+                    return { messages, error: undefined };
                 }
             } catch (e) {
                 console.error("Failed to parse chat messages from sessionStorage", e);
@@ -37,6 +75,7 @@ const getInitialState = (): ChatState => {
     // Default initial state
     return {
         messages: [{ role: 'assistant', content: "Hello! I'm Niouspark Smart AI. How can I help you today?" }],
+        error: undefined
     };
 };
 
@@ -44,55 +83,58 @@ const getInitialState = (): ChatState => {
 export function ChatClient() {
   const [state, formAction, isPending] = useActionState(continueConversation, getInitialState());
   const formRef = useRef<HTMLFormElement>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // Save messages to session storage whenever they change
+    if (viewportRef.current) {
+        viewportRef.current.scrollTop = viewportRef.current.scrollHeight;
+    }
     if (state.messages.length > 0) {
         sessionStorage.setItem('chatMessages', JSON.stringify(state.messages));
     }
   }, [state.messages]);
 
   const handleFormAction = (formData: FormData) => {
+    if (!formData.get('message')?.toString().trim()) return;
     formAction(formData);
     formRef.current?.reset();
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
-        {state.messages.map((message, index) => (
-          <div key={index} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : 'justify-start')}>
-            {message.role === 'assistant' && (
-              <Avatar className="h-10 w-10 border-2 border-primary">
-                <AvatarFallback><Bot /></AvatarFallback>
-              </Avatar>
-            )}
-            <div className={cn(
-              "max-w-lg p-4 rounded-xl shadow",
-              message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
-            )}>
-              <p className="whitespace-pre-wrap">{message.content}</p>
+      <div ref={viewportRef} className="flex-1 min-h-0 overflow-y-auto p-4">
+        <div className="space-y-6 pb-4">
+            {state.messages.map((message, index) => (
+            <div key={index} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : 'justify-start')}>
+                {message.role === 'assistant' && (
+                <Avatar className="h-10 w-10 border-2 border-primary">
+                    <AvatarFallback><Bot /></AvatarFallback>
+                </Avatar>
+                )}
+                <div className={cn(
+                "max-w-lg p-4 rounded-xl shadow",
+                message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                )}>
+                <p className="whitespace-pre-wrap">{message.content}</p>
+                </div>
+                {message.role === 'user' && (
+                <Avatar className="h-10 w-10">
+                    <AvatarFallback><User /></AvatarFallback>
+                </Avatar>
+                )}
             </div>
-            {message.role === 'user' && (
-              <Avatar className="h-10 w-10">
-                <AvatarFallback><User /></AvatarFallback>
-              </Avatar>
-            )}
-          </div>
-        ))}
-         {isPending && (
-           <div className="flex items-start gap-4">
-              <Avatar className="h-10 w-10 border-2 border-primary">
-                <AvatarFallback><Bot /></AvatarFallback>
-              </Avatar>
-            <div className="max-w-lg p-4 rounded-xl bg-muted flex items-center">
-                <Loader2 className="h-6 w-6 animate-spin text-primary"/>
+            ))}
+            {isPending && (
+            <div className="flex items-start gap-4">
+                <Avatar className="h-10 w-10 border-2 border-primary">
+                    <AvatarFallback><Bot /></AvatarFallback>
+                </Avatar>
+                <div className="max-w-lg p-4 rounded-xl bg-muted flex items-center">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary"/>
+                </div>
             </div>
-           </div>
-        )}
-         <div ref={messagesEndRef} />
+            )}
+        </div>
       </div>
 
        {state.error && (
