@@ -42,7 +42,9 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  serverExternalPackages: ['google-auth-library'],
+  experimental: {
+    serverComponentsExternalPackages: ['google-auth-library', 'farmhash-modern'],
+  },
   env: {
     NEXT_PUBLIC_SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
   }
