@@ -1,14 +1,15 @@
+
 'use client';
 
 import { useActionState, useEffect, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
-import { continueConversation, ChatState } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bot, Loader2, Send, User, Terminal } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { continueConversation, type ChatState } from '@/app/chat/actions';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -42,7 +43,8 @@ const getInitialState = (): ChatState => {
 
 
 export function ChatClient() {
-  const [state, formAction, isPending] = useActionState(continueConversation, getInitialState());
+  const [state, formAction] = useActionState(continueConversation, getInitialState());
+  const { pending } = useFormStatus();
   const formRef = useRef<HTMLFormElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +85,7 @@ export function ChatClient() {
             )}
           </div>
         ))}
-         {isPending && (
+         {pending && (
            <div className="flex items-start gap-4">
               <Avatar className="h-10 w-10 border-2 border-primary">
                 <AvatarFallback><Bot /></AvatarFallback>
@@ -112,7 +114,7 @@ export function ChatClient() {
             name="message"
             placeholder="Ask anything..."
             className="flex-1"
-            disabled={isPending}
+            disabled={pending}
             autoComplete="off"
           />
           <SubmitButton />
