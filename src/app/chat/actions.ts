@@ -24,9 +24,14 @@ export interface ChatState {
 // New action to load initial chat state
 export async function loadChatState(): Promise<ChatState> {
   try {
+    console.log('Loading chat state...');
+    
     // Validate environment first
     const envValidation = validateEnvironment();
+    console.log('Environment validation:', envValidation);
+    
     if (!envValidation.isValid) {
+      console.error('Environment validation failed:', envValidation.missing);
       return {
         messages: [{ role: 'assistant', content: "Hello! AI Chat is currently unavailable due to missing configuration. Please contact support." }],
         error: `Missing configuration: ${envValidation.missing.join(', ')}`
@@ -78,20 +83,33 @@ export async function continueConversation(
   formData: FormData
 ): Promise<ChatState> {
   try {
+    console.log('Starting continueConversation...');
+    
     const userInput = formData.get('message') as string;
+    console.log('User input received:', userInput ? userInput.substring(0, 100) : 'empty');
+    
     if (!userInput || !userInput.trim()) {
+      console.log('Empty message provided');
       return { ...previousState, error: "Message cannot be empty." };
     }
     
     // Validate environment variables first
+    console.log('Validating environment...');
     const envValidation = validateEnvironment();
+    console.log('Environment validation result:', envValidation);
+    
     if (!envValidation.isValid) {
+      console.error('Environment validation failed:', envValidation.missing);
       return {
         ...previousState,
         error: `AI Chat is temporarily unavailable. Missing configuration: ${envValidation.missing.join(', ')}. Please contact support.`
       };
     }
+    
+    console.log('Getting current user ID...');
     const userId = await getCurrentUserId();
+    console.log('User ID:', userId ? 'found' : 'not found');
+    
     if (!userId) {
       return { 
         ...previousState, 
@@ -100,32 +118,48 @@ export async function continueConversation(
     }
 
     // Get or create chat ID
+    console.log('Getting or creating chat ID...');
     let chatId = previousState.chatId;
     if (!chatId) {
+      console.log('No existing chat ID, creating new chat...');
       chatId = await getOrCreateCurrentChat(userId);
+      console.log('New chat created with ID:', chatId ? 'success' : 'failed');
+    } else {
+      console.log('Using existing chat ID');
     }
 
     // Add user message to Firestore
+    console.log('Adding user message to Firestore...');
     const userMessage: ChatMessage = { role: 'user', content: userInput };
     await addMessageToChat(userId, chatId, userMessage);
+    console.log('User message added successfully');
     
     // Get recent context for the AI
+    console.log('Getting chat context...');
     const context = await getChatContext(userId, chatId, 8); // Last 8 messages for context
+    console.log('Context retrieved, message count:', context.length);
     
     // Call AI with context
+    console.log('Calling AI chat function...');
     const aiResponse = await chat({
       prompt: userInput,
       context: context.slice(-8).map(msg => ({ role: msg.role, content: msg.content }))
     });
+    console.log('AI response received:', aiResponse ? 'success' : 'failed');
     
     // Add AI response to Firestore
+    console.log('Adding AI response to Firestore...');
     const aiMessage: ChatMessage = { role: 'assistant', content: aiResponse };
     await addMessageToChat(userId, chatId, aiMessage);
+    console.log('AI message added successfully');
     
     // Get updated messages
+    console.log('Getting updated chat messages...');
     const updatedChat = await getChat(userId, chatId);
     const messages = updatedChat?.messages.map(msg => ({ role: msg.role, content: msg.content })) || [];
+    console.log('Updated messages retrieved, count:', messages.length);
     
+    console.log('continueConversation completed successfully');
     return { messages, chatId };
   } catch (e: any) {
     console.error("Error continuing conversation:", e);

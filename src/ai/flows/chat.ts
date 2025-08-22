@@ -51,7 +51,15 @@ Your Personality:
 `;
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
-  return chatFlow(input);
+  try {
+    console.log('Starting chat flow with input:', input.prompt.substring(0, 100));
+    const result = await chatFlow(input);
+    console.log('Chat flow completed successfully');
+    return result;
+  } catch (error) {
+    console.error('Chat flow error:', error);
+    throw error;
+  }
 }
 
 const chatFlow = ai.defineFlow(
@@ -61,28 +69,38 @@ const chatFlow = ai.defineFlow(
     outputSchema: ChatOutputSchema,
   },
   async (input) => {
-    // Build conversation history for context
-    let conversationHistory = '';
-    if (input.context && input.context.length > 0) {
-      conversationHistory = '\n\nRecent conversation:\n';
-      input.context.forEach((msg) => {
-        conversationHistory += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+    try {
+      console.log('Building conversation context...');
+      
+      // Build conversation history for context
+      let conversationHistory = '';
+      if (input.context && input.context.length > 0) {
+        conversationHistory = '\n\nRecent conversation:\n';
+        input.context.forEach((msg) => {
+          conversationHistory += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+        });
+        conversationHistory += '\nCurrent message:\n';
+      }
+
+      const fullPrompt = conversationHistory + input.prompt;
+      console.log('Full prompt length:', fullPrompt.length);
+
+      console.log('Calling AI generate...');
+      const llmResponse = await ai.generate({
+        prompt: fullPrompt,
+        model: 'googleai/gemini-2.0-flash',
+        system: systemPrompt,
+         config: {
+          // Higher temperature for more creative, conversational responses
+          temperature: 0.7,
+        },
       });
-      conversationHistory += '\nCurrent message:\n';
+      
+      console.log('AI generate completed, response length:', llmResponse.text?.length || 0);
+      return llmResponse.text;
+    } catch (error) {
+      console.error('Error in chatFlow:', error);
+      throw error;
     }
-
-    const fullPrompt = conversationHistory + input.prompt;
-
-    const llmResponse = await ai.generate({
-      prompt: fullPrompt,
-      model: 'googleai/gemini-2.0-flash',
-      system: systemPrompt,
-       config: {
-        // Higher temperature for more creative, conversational responses
-        temperature: 0.7,
-      },
-    });
-
-    return llmResponse.text;
   }
 );
