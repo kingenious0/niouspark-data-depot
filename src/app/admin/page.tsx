@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import OrderHistory from "@/components/admin/order-history";
 import SalesCard from "@/components/admin/sales-card";
-import { DollarSign, Package, CreditCard, Users, ShoppingCart, Trash2, Loader2, Wallet, Cpu } from 'lucide-react';
+import { DollarSign, Package, CreditCard, Users, ShoppingCart, Trash2, Loader2, Wallet, Cpu, Wand2 } from 'lucide-react';
 import AovCard from "@/components/admin/aov-overview";
 import BestSellersCard from "@/components/admin/best-sellers";
 import CancellationsCard from "@/components/admin/cancellations-card";
@@ -158,6 +158,12 @@ export default function AdminDashboardPage() {
                 <Link href="/admin/users">
                     <Users className="mr-2 h-4 w-4" />
                     Manage Users
+                </Link>
+            </Button>
+            <Button asChild variant="outline">
+                <Link href="/admin/paraphraser">
+                    <Wand2 className="mr-2 h-4 w-4" />
+                    Paraphraser Analytics
                 </Link>
             </Button>
              {isSuperAdmin && (
