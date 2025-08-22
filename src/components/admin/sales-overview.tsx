@@ -8,7 +8,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 import { DollarSign } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, XAxis, ResponsiveContainer } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 import DashboardCard from "./dashboard-card"
 
 const chartData = [
@@ -43,8 +43,7 @@ export default function SalesCard({ value }: SalesCardProps) {
         className="md:col-span-2"
     >
       <div className="h-32 -ml-4">
-        <ResponsiveContainer width="100%" height="100%">
-        <ChartContainer config={chartConfig} className="w-full h-full">
+        <ChartContainer config={chartConfig} className="w-full h-full [&>div]:aspect-auto [&>div]:h-full">
           <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
             <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted-foreground/20" />
             <XAxis
@@ -62,7 +61,6 @@ export default function SalesCard({ value }: SalesCardProps) {
             <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
           </BarChart>
         </ChartContainer>
-        </ResponsiveContainer>
       </div>
     </DashboardCard>
   )

@@ -1,12 +1,29 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { PieChart, Pie, Cell, Tooltip } from "recharts";
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
 import type { AdminTransaction } from "@/lib/datamart";
 
 interface CancellationsCardProps {
     orders: AdminTransaction[];
 }
+
+const chartConfig = {
+  paymentFailed: {
+    label: "Payment Failed",
+    color: "hsl(var(--primary))",
+  },
+  userCancelled: {
+    label: "User Cancelled", 
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig
 
 export default function CancellationsCard({ orders }: CancellationsCardProps) {
     const failedOrders = orders.filter(o => o.status === 'failed');
@@ -14,8 +31,8 @@ export default function CancellationsCard({ orders }: CancellationsCardProps) {
     const paymentFailed = failedOrders.length - userCancelled;
 
     const data = [
-        { name: "Payment Failed", value: paymentFailed, color: "hsl(var(--primary))" },
-        { name: "User Cancelled", value: userCancelled, color: "hsl(var(--chart-2))" },
+        { name: "Payment Failed", value: paymentFailed, fill: "var(--color-paymentFailed)" },
+        { name: "User Cancelled", value: userCancelled, fill: "var(--color-userCancelled)" },
     ];
 
     return (
@@ -25,33 +42,40 @@ export default function CancellationsCard({ orders }: CancellationsCardProps) {
                 <CardDescription>Breakdown of failed orders.</CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="h-48 flex items-center justify-center">
-                   <ResponsiveContainer width="100%" height="100%">
+                <div className="h-48">
+                    <ChartContainer config={chartConfig} className="w-full h-full [&>div]:aspect-auto [&>div]:h-full">
                         <PieChart>
-                            <Tooltip 
-                                contentStyle={{
-                                    backgroundColor: 'hsl(var(--background))',
-                                    borderColor: 'hsl(var(--border))'
-                                }}
+                            <ChartTooltip
+                                cursor={false}
+                                content={<ChartTooltipContent hideLabel />}
                             />
-                            <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} innerRadius={40}>
-                                {data.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                ))}
-                            </Pie>
+                            <Pie 
+                                data={data} 
+                                dataKey="value" 
+                                nameKey="name" 
+                                cx="50%" 
+                                cy="50%" 
+                                outerRadius={60} 
+                                innerRadius={40}
+                            />
                         </PieChart>
-                    </ResponsiveContainer>
+                    </ChartContainer>
                 </div>
                  <div className="mt-4 space-y-2 text-sm">
-                    {data.map(item => (
-                        <div key={item.name} className="flex items-center justify-between">
-                           <div className="flex items-center gap-2">
-                                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }}></span>
-                                <span>{item.name}</span>
-                           </div>
-                           <span className="font-medium">{item.value}</span>
-                        </div>
-                    ))}
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--color-paymentFailed)" }}></span>
+                            <span>Payment Failed</span>
+                       </div>
+                       <span className="font-medium">{paymentFailed}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center gap-2">
+                            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: "var(--color-userCancelled)" }}></span>
+                            <span>User Cancelled</span>
+                       </div>
+                       <span className="font-medium">{userCancelled}</span>
+                    </div>
                 </div>
             </CardContent>
         </Card>
