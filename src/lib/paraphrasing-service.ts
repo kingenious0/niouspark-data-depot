@@ -1,9 +1,10 @@
 import { ai } from '@/ai/genkit';
+import { WORD_LIMIT, type Tone, type Mode } from '@/lib/constants';
 
 export interface ParaphraseRequest {
   text: string;
-  tone?: 'formal' | 'casual' | 'academic';
-  mode?: 'paraphrase' | 'humanize' | 'simplify';
+  tone?: Tone;
+  mode?: Mode;
 }
 
 export interface ParaphraseResponse {
@@ -13,8 +14,6 @@ export interface ParaphraseResponse {
   wordCount: number;
   error?: string;
 }
-
-const WORD_LIMIT = 2000;
 
 /**
  * Count words in text (simple implementation)
@@ -157,4 +156,3 @@ export async function extractTextFromFile(file: File): Promise<{ success: boolea
   }
 }
 
-export { WORD_LIMIT };

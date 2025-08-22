@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { paraphraseText, type ParaphraseRequest } from "@/lib/paraphrasing-service";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { VALID_TONES, VALID_MODES } from "@/lib/constants";
 
 // For tracking usage
 async function logParaphraseUsage(userId: string, wordCount: number, mode: string, tone: string) {
@@ -38,15 +39,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate tone and mode
-    const validTones = ['formal', 'casual', 'academic'];
-    const validModes = ['paraphrase', 'humanize', 'simplify'];
-    
-    if (!validTones.includes(tone)) {
-      return NextResponse.json({ error: "Invalid tone. Must be: formal, casual, or academic" }, { status: 400 });
+    if (!VALID_TONES.includes(tone as any)) {
+      return NextResponse.json({ error: `Invalid tone. Must be: ${VALID_TONES.join(', ')}` }, { status: 400 });
     }
     
-    if (!validModes.includes(mode)) {
-      return NextResponse.json({ error: "Invalid mode. Must be: paraphrase, humanize, or simplify" }, { status: 400 });
+    if (!VALID_MODES.includes(mode as any)) {
+      return NextResponse.json({ error: `Invalid mode. Must be: ${VALID_MODES.join(', ')}` }, { status: 400 });
     }
 
     console.log(`User ${userId} requesting paraphrasing (${mode}, ${tone})`);

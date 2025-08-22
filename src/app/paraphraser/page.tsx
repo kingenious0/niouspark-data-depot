@@ -22,10 +22,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { auth } from "@/lib/firebase";
-import { WORD_LIMIT } from "@/lib/paraphrasing-service";
-
-type Mode = 'paraphrase' | 'humanize' | 'simplify';
-type Tone = 'formal' | 'casual' | 'academic';
+import { WORD_LIMIT, type Mode, type Tone } from "@/lib/constants";
 
 export default function ParaphraserPage() {
   const [inputText, setInputText] = useState("");
