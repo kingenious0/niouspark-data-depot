@@ -45,7 +45,7 @@ export default async function TelecelBundlesPage() {
                 data: `${bundle.mb} MB`,
                 price: parseFloat(bundle.price),
                 validity: 'Non-Expiry',
-                available: bundle.available !== false // Default to available if not explicitly false
+                available: bundle.available // Pass through the availability status from datamart
             }} />
           ))}
         </div>
