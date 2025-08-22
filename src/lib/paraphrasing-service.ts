@@ -1,5 +1,6 @@
 import { ai } from '@/ai/genkit';
-import { WORD_LIMIT, type Tone, type Mode } from '@/lib/constants';
+import { WORD_LIMIT, type Tone, type Mode, type HumanizationPersona, HUMANIZATION_PERSONAS } from '@/lib/constants';
+import { humanizeText, advancedHumanizeText, analyzeHumanLikeness } from '@/lib/humanization';
 
 export interface ParaphraseRequest {
   text: string;
@@ -23,43 +24,134 @@ function countWords(text: string): number {
 }
 
 /**
- * Generate paraphrasing prompt based on mode and tone
+ * Generate advanced humanization prompt based on mode and tone
  */
 function generatePrompt(text: string, mode: string, tone: string): string {
-  const baseInstruction = "You are an expert writing assistant. Your task is to rewrite the following text while maintaining its original meaning and key information.";
+  // Select persona based on tone
+  const persona = getPersonaForTone(tone);
+  const personaInfo = HUMANIZATION_PERSONAS[persona];
   
-  const modeInstructions = {
-    paraphrase: "Paraphrase the text using different words and sentence structures while keeping the same meaning.",
-    humanize: "Rewrite the text to sound more natural, conversational, and human-like. Remove any robotic or AI-generated patterns.",
-    simplify: "Simplify the text to make it clearer and easier to understand while maintaining all important information."
-  };
+  if (mode === 'humanize') {
+    return generateHumanizationPrompt(text, persona, personaInfo);
+  } else if (mode === 'paraphrase') {
+    return generateParaphrasePrompt(text, tone);
+  } else {
+    return generateSimplificationPrompt(text, tone);
+  }
+}
 
+/**
+ * Get appropriate persona based on tone
+ */
+function getPersonaForTone(tone: string): HumanizationPersona {
+  switch (tone) {
+    case 'formal':
+      return 'professional';
+    case 'casual':
+      return 'student';
+    case 'academic':
+      return 'professional';
+    default:
+      return 'blogger';
+  }
+}
+
+/**
+ * Generate prompt specifically designed for AI detector resistance
+ */
+function generateHumanizationPrompt(text: string, persona: HumanizationPersona, personaInfo: any): string {
+  return `You are a ${personaInfo.name.toLowerCase()} rewriting text to sound completely human-written and bypass AI detectors.
+
+Your writing persona: ${personaInfo.description}
+Key characteristics: ${personaInfo.characteristics.join(', ')}
+
+CRITICAL INSTRUCTIONS for AI detector resistance:
+1. VARY sentence length dramatically - mix very short sentences with longer ones
+2. Use contractions naturally (don't, can't, it's, you're, etc.)
+3. Add conversational elements: "You know," "Honestly," "Actually," "By the way"
+4. Include subtle imperfections humans make: slight redundancy, casual transitions
+5. Break AI writing patterns: avoid overly structured paragraphs
+6. Use natural human connectors: "So," "Plus," "Though," "Well," instead of formal transitions
+7. Add personality - write like a real person, not a robot
+8. Occasionally use incomplete sentences or fragments for emphasis
+9. Include hesitation markers where natural: "I mean," "you see," "well,"
+10. Vary vocabulary - don't be too precise or academic unless specifically needed
+
+Write as if you're ${getPersonaContext(persona)} explaining this to someone in person.
+Maintain the original meaning but make it sound completely human-written.
+
+DO NOT:
+- Use overly formal academic language unless absolutely necessary
+- Create perfectly structured, symmetrical paragraphs
+- Use repetitive sentence patterns
+- Sound like an AI assistant or textbook
+
+Original text:
+${text}
+
+Rewrite this to sound like a real human wrote it:`;
+}
+
+/**
+ * Generate traditional paraphrasing prompt
+ */
+function generateParaphrasePrompt(text: string, tone: string): string {
   const toneInstructions = {
-    formal: "Use formal, professional language appropriate for academic or business contexts.",
-    casual: "Use casual, friendly language as if explaining to a friend.",
-    academic: "Use scholarly, academic language with precise terminology and complex sentence structures."
+    formal: "Use professional, polished language appropriate for business or academic contexts.",
+    casual: "Use friendly, approachable language as if talking to a colleague.",
+    academic: "Use scholarly language with precise terminology."
   };
 
-  return `${baseInstruction}
-
-${modeInstructions[mode as keyof typeof modeInstructions]}
+  return `Rewrite the following text using different words and sentence structures while maintaining the exact same meaning.
 
 ${toneInstructions[tone as keyof typeof toneInstructions]}
 
-Important requirements:
-- Maintain the original meaning and all key information
-- Keep the same general length as the original
-- Use natural, flowing language
-- Avoid repetitive phrasing
-- Ensure the output sounds human-written, not AI-generated
-- Do not add new information not present in the original
-- Preserve any technical terms that are essential to the meaning
+Requirements:
+- Keep the same meaning and information
+- Use synonyms and rephrase sentences
+- Maintain similar length
+- Ensure clarity and readability
 
-Original text to rewrite:
-
+Original text:
 ${text}
 
-Rewritten text:`;
+Paraphrased version:`;
+}
+
+/**
+ * Generate simplification prompt
+ */
+function generateSimplificationPrompt(text: string, tone: string): string {
+  return `Simplify the following text to make it clearer and easier to understand while keeping all important information.
+
+Make it accessible to a general audience by:
+- Using simpler vocabulary where possible
+- Breaking down complex sentences
+- Explaining technical terms if needed
+- Maintaining a ${tone} tone
+
+Original text:
+${text}
+
+Simplified version:`;
+}
+
+/**
+ * Get contextual description for persona
+ */
+function getPersonaContext(persona: HumanizationPersona): string {
+  switch (persona) {
+    case 'student':
+      return 'a college student chatting with a friend';
+    case 'blogger':
+      return 'a blogger writing for your audience';
+    case 'journalist':
+      return 'a journalist with a story deadline';
+    case 'professional':
+      return 'a professional explaining to a colleague';
+    default:
+      return 'someone having a conversation';
+  }
 }
 
 /**
@@ -98,10 +190,23 @@ export async function paraphraseText(request: ParaphraseRequest): Promise<Paraph
 
     // Call Gemini API through Genkit
     const response = await ai.generate(prompt);
-    const paraphrasedText = response.text?.trim();
+    let paraphrasedText = response.text?.trim();
 
     if (!paraphrasedText) {
       throw new Error('No response received from AI service');
+    }
+
+    // Apply advanced humanization for maximum AI detector resistance
+    if (mode === 'humanize') {
+      console.log(`Applying advanced humanization with ${tone} tone and aggressive intensity for maximum AI detector resistance`);
+      paraphrasedText = advancedHumanizeText(paraphrasedText, {
+        persona: getPersonaForTone(tone),
+        intensity: 'aggressive' // Maximum humanization for detector resistance
+      });
+
+      // Analyze human-likeness after advanced processing
+      const humanLikeness = analyzeHumanLikeness(paraphrasedText);
+      console.log(`Human-likeness analysis: Score ${humanLikeness.score}, Factors:`, humanLikeness.factors);
     }
 
     console.log(`Paraphrasing completed. Original: ${wordCount} words, Output: ${countWords(paraphrasedText)} words`);

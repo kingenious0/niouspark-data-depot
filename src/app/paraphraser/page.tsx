@@ -9,15 +9,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { 
-  FileText, 
-  Upload, 
-  Wand2, 
-  Copy, 
-  Download, 
-  Loader2, 
+import {
+  FileText,
+  Upload,
+  Wand2,
+  Copy,
+  Download,
+  Loader2,
   RotateCcw,
-  AlertCircle
+  AlertCircle,
+  BarChart3
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -32,6 +33,7 @@ export default function ParaphraserPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [wordCount, setWordCount] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [humanLikenessAnalysis, setHumanLikenessAnalysis] = useState<any>(null);
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
@@ -175,18 +177,27 @@ export default function ParaphraserPage() {
 
       if (result.success && result.paraphrasedText) {
         setOutputText(result.paraphrasedText);
-        
+
+        // Set human-likeness analysis if available
+        if (result.humanLikenessAnalysis) {
+          setHumanLikenessAnalysis(result.humanLikenessAnalysis);
+        }
+
         // If we processed a file, update the input text with extracted content
         if (needsFileProcessing) {
           setInputText(result.originalText);
           setWordCount(countWords(result.originalText));
         }
-        
+
+        const analysisText = result.humanLikenessAnalysis
+          ? ` (Human-likeness: ${(result.humanLikenessAnalysis.score * 100).toFixed(1)}%)`
+          : '';
+
         toast({
           title: "Success!",
-          description: needsFileProcessing 
-            ? `File processed and paraphrased successfully (${result.wordCount} words)` 
-            : `Text paraphrased successfully (${result.wordCount} words processed)`
+          description: needsFileProcessing
+            ? `File processed and paraphrased successfully (${result.wordCount} words)${analysisText}`
+            : `Text paraphrased successfully (${result.wordCount} words processed)${analysisText}`
         });
       } else {
         throw new Error(result.error || 'No paraphrased text received');
@@ -246,6 +257,7 @@ export default function ParaphraserPage() {
     setOutputText("");
     setWordCount(0);
     setSelectedFile(null);
+    setHumanLikenessAnalysis(null);
     // Reset file input
     const fileInput = document.getElementById('file-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
@@ -449,18 +461,59 @@ export default function ParaphraserPage() {
             </div>
 
             {outputText && (
-              <div className="text-sm text-muted-foreground text-center pt-2">
-                Output: {countWords(outputText)} words
+              <div className="space-y-2 pt-2">
+                <div className="text-sm text-muted-foreground text-center">
+                  Output: {countWords(outputText)} words
+                </div>
+
+                {/* Human-likeness Analysis */}
+                {humanLikenessAnalysis && (
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="h-4 w-4 text-blue-600" />
+                      <h4 className="font-semibold text-blue-800 dark:text-blue-200">
+                        Human-likeness Analysis
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="font-medium text-blue-700 dark:text-blue-300 mb-1">Overall Score</div>
+                        <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                          {(humanLikenessAnalysis.score * 100).toFixed(1)}%
+                        </div>
+                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          {humanLikenessAnalysis.score > 0.7 ? 'High human-likeness' :
+                           humanLikenessAnalysis.score > 0.5 ? 'Moderate human-likeness' :
+                           'Low human-likeness'}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="font-medium text-blue-700 dark:text-blue-300 mb-1">Key Factors</div>
+                        <div className="text-xs space-y-1">
+                          <div>Sentence Variation: {(humanLikenessAnalysis.factors.sentenceVariation * 100).toFixed(1)}%</div>
+                          <div>Contractions: {(humanLikenessAnalysis.factors.contractionUsage * 100).toFixed(1)}%</div>
+                          <div>Conversational: {(humanLikenessAnalysis.factors.conversationalElements * 100).toFixed(1)}%</div>
+                          <div>Natural Flow: {(humanLikenessAnalysis.factors.naturalFlow * 100).toFixed(1)}%</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Features Info */}
+      {/* Enhanced Features Info */}
       <Card className="mt-8">
         <CardHeader>
-          <CardTitle>How it Works</CardTitle>
+          <CardTitle>🚀 Enhanced Humaniser Pro Features</CardTitle>
+          <CardDescription>
+            Advanced AI detector resistance with maximum human-like output
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-3 gap-4 text-sm">
@@ -471,16 +524,52 @@ export default function ParaphraserPage() {
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">🤖 Humanize</h4>
+              <h4 className="font-semibold mb-2">🛡️ Advanced Humanize</h4>
               <p className="text-muted-foreground">
-                Transform AI-generated or robotic text into natural, human-like writing.
+                <strong>AI Detector Resistant:</strong> Transform text with sophisticated human patterns, emotional markers, and natural imperfections that bypass GPTZero, Turnitin, and other detectors.
               </p>
+              <ul className="mt-2 text-xs text-muted-foreground list-disc list-inside">
+                <li>Sentence variability injection</li>
+                <li>AI-term substitution</li>
+                <li>Emotional engagement cues</li>
+                <li>Human hesitation markers</li>
+              </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-2">📝 Simplify</h4>
               <p className="text-muted-foreground">
                 Make complex text clearer and easier to understand while preserving all key information.
               </p>
+            </div>
+          </div>
+
+          {/* AI Detector Resistance Features */}
+          <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <h4 className="font-semibold mb-3 text-green-800 dark:text-green-200">
+              🛡️ Maximum AI Detector Resistance Features
+            </h4>
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Word Substitution Engine</h5>
+                <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
+                  <li>• "Utilize" → "use" or "take advantage of"</li>
+                  <li>• "Furthermore" → "plus" or "also"</li>
+                  <li>• "However" → "but" or "though"</li>
+                  <li>• "Therefore" → "so" or "that means"</li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Human Pattern Injection</h5>
+                <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
+                  <li>• Variable sentence lengths (burstiness)</li>
+                  <li>• Natural contractions and fillers</li>
+                  <li>• Emotional emphasis markers</li>
+                  <li>• Conversational connectors</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-3 p-2 bg-green-100 dark:bg-green-800/30 rounded text-xs text-green-700 dark:text-green-300">
+              <strong>Success Rate:</strong> Designed to pass GPTZero, Turnitin, Originality, Copyleaks, and other major AI detectors as human-written content.
             </div>
           </div>
         </CardContent>

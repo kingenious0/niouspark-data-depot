@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { paraphraseText, type ParaphraseRequest } from "@/lib/paraphrasing-service";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { VALID_TONES, VALID_MODES } from "@/lib/constants";
+import { analyzeHumanLikeness } from "@/lib/humanization";
 
 // For tracking usage
 async function logParaphraseUsage(userId: string, wordCount: number, mode: string, tone: string) {
@@ -55,6 +56,12 @@ export async function POST(request: NextRequest) {
     // Log usage for analytics (don't await to avoid slowing response)
     if (result.success) {
       logParaphraseUsage(userId, result.wordCount, mode, tone);
+    }
+
+    // Add human-likeness analysis for 'humanize' mode
+    if (result.success && mode === 'humanize' && result.paraphrasedText) {
+      const humanLikeness = analyzeHumanLikeness(result.paraphrasedText);
+      result.humanLikenessAnalysis = humanLikeness;
     }
 
     return NextResponse.json(result);
@@ -137,6 +144,12 @@ export async function PUT(request: NextRequest) {
     // Log usage for analytics (don't await to avoid slowing response)
     if (result.success) {
       logParaphraseUsage(userId, result.wordCount, mode, tone);
+    }
+
+    // Add human-likeness analysis for 'humanize' mode
+    if (result.success && mode === 'humanize' && result.paraphrasedText) {
+      const humanLikeness = analyzeHumanLikeness(result.paraphrasedText);
+      result.humanLikenessAnalysis = humanLikeness;
     }
 
     return NextResponse.json({
