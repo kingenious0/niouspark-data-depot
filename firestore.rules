@@ -25,5 +25,11 @@ service cloud.firestore {
       allow read: if request.auth != null && request.auth.uid == resource.data.userId;
       allow write: if false; // All writes must be from the server/admin SDK
     }
+
+    // CHATS SUBCOLLECTION
+    // - Allow users to read and write their own chats and perform queries
+    match /users/{userId}/chats/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
   }
 }
