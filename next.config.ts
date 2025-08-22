@@ -53,7 +53,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb'
     },
-    serverComponentsExternalPackages: ['google-auth-library', 'farmhash-modern', 'firebase-admin'],
   },
   webpack: (config) => {
     config.resolve.alias = {
