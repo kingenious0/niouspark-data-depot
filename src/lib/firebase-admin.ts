@@ -124,4 +124,26 @@ export async function verifyIdToken(idToken: string): Promise<admin.auth.Decoded
     }
 }
 
+/**
+ * Deletes a single transaction by ID. Only for super admin use.
+ * @param transactionId The ID of the transaction to delete
+ * @returns Promise that resolves when transaction is deleted
+ */
+export async function deleteTransaction(transactionId: string): Promise<void> {
+    try {
+        const transactionRef = adminDb.collection('transactions').doc(transactionId);
+        const transactionDoc = await transactionRef.get();
+        
+        if (!transactionDoc.exists) {
+            throw new Error(`Transaction ${transactionId} not found`);
+        }
+        
+        await transactionRef.delete();
+        console.log(`Successfully deleted transaction ${transactionId}`);
+    } catch (error) {
+        console.error(`Error deleting transaction ${transactionId}:`, error);
+        throw new Error(`Failed to delete transaction: ${error}`);
+    }
+}
+
 export { adminDb, adminAuth };

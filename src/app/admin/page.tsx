@@ -243,7 +243,14 @@ export default function AdminDashboardPage() {
                 <CardDescription>A list of the most recent transactions.</CardDescription>
             </CardHeader>
             <CardContent>
-                <OrderHistory orders={recentOrders} />
+                <OrderHistory 
+                  orders={recentOrders} 
+                  isSuperAdmin={isSuperAdmin}
+                  onTransactionDeleted={(transactionId) => {
+                    // Remove the deleted transaction from state
+                    setAllOrders(prev => prev.filter(order => order._id !== transactionId));
+                  }}
+                />
             </CardContent>
             </Card>
         </div>
