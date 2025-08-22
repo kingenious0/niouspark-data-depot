@@ -50,6 +50,7 @@ interface Bundle {
   price: number;
   data: string;
   validity: string;
+  available?: boolean;
 }
 
 interface BundleCardProps {
@@ -64,6 +65,11 @@ export default function BundleCard({ bundle }: BundleCardProps) {
   const price = typeof bundle.price === 'string' ? parseFloat(bundle.price) : bundle.price;
 
   const handlePurchaseClick = () => {
+    // Don't allow purchase if bundle is unavailable
+    if (bundle.available === false) {
+      return;
+    }
+    
     if (!user) {
       router.push('/login');
     } else {
@@ -91,25 +97,50 @@ export default function BundleCard({ bundle }: BundleCardProps) {
     )
   }
 
+  // Check if bundle is unavailable
+  const isUnavailable = bundle.available === false;
+
   return (
     <>
-      <Card className="flex flex-col shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
+      <Card className={`flex flex-col shadow-lg hover:shadow-primary/20 transition-shadow duration-300 ${isUnavailable ? 'opacity-75 border-muted' : ''}`}>
         <CardHeader>
           <CardTitle className="font-headline text-2xl">{bundle.name}</CardTitle>
-          <CardDescription>{bundle.validity}</CardDescription>
+          <CardDescription>
+            {bundle.validity}
+            {isUnavailable && (
+              <span className="block text-sm text-destructive font-medium mt-1">
+                Currently Unavailable
+              </span>
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent className="flex-grow space-y-2">
           <p className="text-3xl font-bold">
             GH₵
-            <span className="text-primary">
+            <span className={isUnavailable ? "text-muted-foreground" : "text-primary"}>
               {price.toFixed(2)}
             </span>
           </p>
           <p className="text-muted-foreground">{bundle.data}</p>
+          {isUnavailable && (
+            <p className="text-sm text-destructive">
+              This bundle is temporarily not available for purchase.
+            </p>
+          )}
         </CardContent>
         <CardFooter>
-            <Button className="w-full font-bold" onClick={handlePurchaseClick} disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : 'Purchase'}
+            <Button 
+              className="w-full font-bold" 
+              onClick={handlePurchaseClick} 
+              disabled={loading || isUnavailable}
+            >
+              {loading ? (
+                <Loader2 className="animate-spin" /> 
+              ) : isUnavailable ? (
+                'Unavailable'
+              ) : (
+                'Purchase'
+              )}
             </Button>
         </CardFooter>
       </Card>

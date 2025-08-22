@@ -6,6 +6,7 @@ export type DatamartBundle = {
     mb: string;
     price: string;
     network: 'TELECEL' | 'YELLO' | 'AT_PREMIUM';
+    available?: boolean; // Bundle availability status
 };
 
 type DatamartBundlesResponse = {
@@ -107,11 +108,23 @@ export async function fetchBundles(network: 'TELECEL' | 'YELLO' | 'AT_PREMIUM'):
             // Extract the specific network's bundles from the response
             const networkBundles = result.data[network] || [];
             
-            // Ensure all bundles have the correct network field set
-            return networkBundles.map(bundle => ({
-                ...bundle,
-                network: network
-            }));
+            // Ensure all bundles have the correct network field set and handle availability
+            return networkBundles.map(bundle => {
+                let isAvailable = true;
+                
+                // Mark specific Telecel bundles as unavailable
+                if (network === 'TELECEL') {
+                    if (bundle.capacity === '5' || bundle.capacity === '8') {
+                        isAvailable = false;
+                    }
+                }
+                
+                return {
+                    ...bundle,
+                    network: network,
+                    available: isAvailable
+                };
+            });
         } else {
             console.error(`API error for ${network}: ${result.message}`);
             return [];
