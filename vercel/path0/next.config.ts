@@ -42,7 +42,10 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  serverExternalPackages: ['google-auth-library'],
+  experimental: {
+    serverComponentsExternalPackages: ['@genkit-ai/google-cloud']
+  },
+  serverExternalPackages: ['google-auth-library', 'firebase-admin', 'farmhash-modern'],
   env: {
     NEXT_PUBLIC_SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
   }

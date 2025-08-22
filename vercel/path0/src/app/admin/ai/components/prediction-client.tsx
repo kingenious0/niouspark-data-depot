@@ -1,8 +1,8 @@
+
 "use client";
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { getSalesAnalysis } from "../actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,8 +13,31 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal, Lightbulb, Loader2, CalendarDays, Hourglass } from "lucide-react";
+import { analyzeSalesData, type SalesAnalysisOutput } from "@/ai/flows/predict-top-bundles";
 
-const initialState = {
+// --- SERVER ACTION (moved directly into the component file) ---
+
+type SalesAnalysisState = {
+  data: SalesAnalysisOutput | null;
+  error: string | null;
+};
+
+async function getSalesAnalysis(
+  prevState: SalesAnalysisState,
+  formData: FormData
+): Promise<SalesAnalysisState> {
+  try {
+    const result = await analyzeSalesData();
+    return { data: result, error: null };
+  } catch (e: any) {
+    console.error("Error getting sales analysis:", e);
+    return { data: null, error: e.message || "An unexpected error occurred." };
+  }
+}
+
+// --- CLIENT COMPONENT ---
+
+const initialState: SalesAnalysisState = {
   data: null,
   error: null,
 };
@@ -37,13 +60,7 @@ function SubmitButton() {
 
 interface PeriodAnalysisProps {
     title: string;
-    data: {
-        totalSales: number;
-        totalOrders: number;
-        bestSellingBundle: string;
-        summary: string;
-        totalPendingOrders: number;
-    };
+    data: SalesAnalysisOutput[keyof SalesAnalysisOutput];
 }
 
 function PeriodAnalysisCard({ title, data }: PeriodAnalysisProps) {

@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { getSalesAnalysis } from '@/app/admin/ai/actions';
+import { getSalesAnalysis } from "../actions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -87,6 +87,7 @@ function PeriodAnalysisCard({ title, data }: PeriodAnalysisProps) {
         </Card>
     )
 }
+
 
 export function PredictionClient() {
   const [state, formAction] = useActionState(getSalesAnalysis, initialState);

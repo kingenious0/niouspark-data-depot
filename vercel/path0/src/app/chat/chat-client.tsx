@@ -1,14 +1,53 @@
+
 'use client';
 
 import { useActionState, useEffect, useRef } from 'react';
 import { useFormStatus } from 'react-dom';
-import { continueConversation, ChatState } from './actions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bot, Loader2, Send, User, Terminal } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { chat } from '@/ai/flows/chat';
+
+// --- SERVER ACTION (moved directly into the component file) ---
+
+interface ChatMessage {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+interface ChatState {
+    messages: ChatMessage[];
+    error?: string;
+}
+
+async function continueConversation(
+  previousState: ChatState,
+  formData: FormData
+): Promise<ChatState> {
+  const userInput = formData.get('message') as string;
+  if (!userInput) {
+    return { ...previousState, error: "Message cannot be empty." };
+  }
+  
+  const userMessage: ChatMessage = { role: 'user', content: userInput };
+  const newHistory = [...previousState.messages, userMessage];
+
+  try {
+    const aiResponse = await chat(userInput);
+    const aiMessage: ChatMessage = { role: 'assistant', content: aiResponse };
+    return { messages: [...newHistory, aiMessage] };
+  } catch (e: any) {
+    console.error("Error continuing conversation:", e);
+    const errorMessage = e.message || "An unexpected error occurred.";
+    return { messages: newHistory, error: errorMessage };
+  }
+}
+
+
+// --- CLIENT COMPONENT ---
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -48,20 +87,19 @@ export function ChatClient() {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // Save messages to session storage whenever they change
     if (state.messages.length > 0) {
         sessionStorage.setItem('chatMessages', JSON.stringify(state.messages));
     }
   }, [state.messages]);
 
   const handleFormAction = (formData: FormData) => {
+    if (!formData.get('message')?.toString().trim()) return;
     formAction(formData);
     formRef.current?.reset();
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div ref={messagesEndRef} />
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
         {state.messages.map((message, index) => (
           <div key={index} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : 'justify-start')}>
@@ -94,6 +132,7 @@ export function ChatClient() {
            </div>
         )}
       </div>
+      <div ref={messagesEndRef} />
 
        {state.error && (
         <div className="p-4">
