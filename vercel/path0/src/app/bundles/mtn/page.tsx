@@ -52,7 +52,7 @@ export default async function MtnBundlesPage() {
                 name: `${bundle.capacity}GB Bundle`,
                 data: `${bundle.mb} MB`,
                 price: parseFloat(bundle.price),
-                validity: 'Non-Expi'
+                validity: 'Non-Expiry'
             }} />
           ))}
         </div>
