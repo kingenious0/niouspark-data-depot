@@ -50,21 +50,58 @@ Your Personality:
 - Never mention that you are a language model or that you are based on Gemini. You are "Niouspark Smart AI".
 `;
 
-export async function chat(input: ChatInput): Promise<ChatOutput> {
+// Create a simple backup chat function that doesn't rely on genkit if it fails
+async function simpleChatFallback(prompt: string): Promise<string> {
+  console.log('Using simple chat fallback');
+  return `Hello! I received your message: "${prompt}". I'm currently experiencing technical difficulties with my AI processing, but I'm here to help with questions about Niouspark data bundles. Please try again in a moment, or contact support if the issue persists.`;
+}
+
+export async function chat(input: any): Promise<ChatOutput> {
   try {
     console.log('Starting chat flow with input:', input);
-    console.log('Input prompt:', input?.prompt ? input.prompt.substring(0, 100) : 'undefined');
+    console.log('Input type:', typeof input);
+    console.log('Input keys:', input ? Object.keys(input) : 'no keys');
     
-    if (!input || !input.prompt) {
-      throw new Error('Invalid input: prompt is required');
+    // Handle case where input might be a different structure
+    let prompt: string;
+    let context: any[] = [];
+    
+    if (typeof input === 'string') {
+      // If input is just a string, use it as prompt
+      prompt = input;
+    } else if (input && typeof input === 'object') {
+      // Try different possible property names
+      prompt = input.prompt || input.message || input.text || '';
+      context = input.context || [];
+    } else {
+      console.error('Invalid input type, using fallback');
+      return await simpleChatFallback('Invalid input received');
     }
     
-    const result = await chatFlow(input);
-    console.log('Chat flow completed successfully');
-    return result;
+    if (!prompt || typeof prompt !== 'string') {
+      console.error('Invalid prompt, using fallback');
+      return await simpleChatFallback('Empty message received');
+    }
+    
+    console.log('Extracted prompt:', prompt.substring(0, 100));
+    console.log('Extracted context length:', context.length);
+    
+    const validatedInput: ChatInput = {
+      prompt,
+      context: Array.isArray(context) ? context : []
+    };
+    
+    try {
+      const result = await chatFlow(validatedInput);
+      console.log('Chat flow completed successfully');
+      return result;
+    } catch (flowError) {
+      console.error('Chat flow failed, using fallback:', flowError);
+      return await simpleChatFallback(prompt);
+    }
   } catch (error) {
-    console.error('Chat flow error:', error);
-    throw error;
+    console.error('Chat flow error, using fallback:', error);
+    return await simpleChatFallback('Error processing message');
   }
 }
 
