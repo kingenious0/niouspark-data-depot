@@ -10,7 +10,18 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const ChatInputSchema = z.string();
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const ChatInputSchema = z.object({
+  prompt: z.string(),
+  context: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string()
+  })).optional().default([])
+});
 export type ChatInput = z.infer<typeof ChatInputSchema>;
 
 const ChatOutputSchema = z.string();
@@ -39,8 +50,8 @@ Your Personality:
 - Never mention that you are a language model or that you are based on Gemini. You are "Niouspark Smart AI".
 `;
 
-export async function chat(prompt: ChatInput): Promise<ChatOutput> {
-  return chatFlow(prompt);
+export async function chat(input: ChatInput): Promise<ChatOutput> {
+  return chatFlow(input);
 }
 
 const chatFlow = ai.defineFlow(
@@ -49,9 +60,21 @@ const chatFlow = ai.defineFlow(
     inputSchema: ChatInputSchema,
     outputSchema: ChatOutputSchema,
   },
-  async (prompt) => {
+  async (input) => {
+    // Build conversation history for context
+    let conversationHistory = '';
+    if (input.context && input.context.length > 0) {
+      conversationHistory = '\n\nRecent conversation:\n';
+      input.context.forEach((msg) => {
+        conversationHistory += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+      });
+      conversationHistory += '\nCurrent message:\n';
+    }
+
+    const fullPrompt = conversationHistory + input.prompt;
+
     const llmResponse = await ai.generate({
-      prompt: prompt,
+      prompt: fullPrompt,
       model: 'googleai/gemini-2.0-flash',
       system: systemPrompt,
        config: {

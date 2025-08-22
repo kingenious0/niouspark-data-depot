@@ -8,7 +8,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "id_token is required" }, { status: 400 });
   }
 
-  cookies().set("id_token", id_token, {
+  const cookieStore = await cookies();
+  cookieStore.set("id_token", id_token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     path: "/",
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
-  cookies().delete("id_token");
+  const cookieStore = await cookies();
+  cookieStore.delete("id_token");
   return NextResponse.json({ success: true });
 }

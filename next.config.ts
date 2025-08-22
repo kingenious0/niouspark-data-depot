@@ -31,7 +31,9 @@ const nextConfig: NextConfig = {
     '@opentelemetry/winston-transport' // Added for OpenTelemetry
   ],
   experimental: {
-    serverActions: true,
+    serverActions: {
+      bodySizeLimit: '2mb'
+    },
   },
   webpack: (config) => {
     config.resolve.alias = {

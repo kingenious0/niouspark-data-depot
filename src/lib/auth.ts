@@ -44,7 +44,7 @@ export const useAuth = () => {
       if (user) {
         await setAuthCookies(user);
         const tokenResult = await user.getIdTokenResult(true); // Force refresh
-        const userRole = tokenResult.claims.role || 'customer';
+        const userRole = (tokenResult.claims.role as 'admin' | 'customer') || 'customer';
         
         setUser({ ...user, role: userRole });
         setIsAdmin(userRole === 'admin');
@@ -65,7 +65,7 @@ export const useAuth = () => {
 export const login = async (email: string, password: string): Promise<{ user: User, role: string }> => {
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   const tokenResult = await userCredential.user.getIdTokenResult(true); // Force refresh
-  const role = tokenResult.claims.role || 'customer';
+  const role = (tokenResult.claims.role as string) || 'customer';
   return { user: userCredential.user, role };
 }
 

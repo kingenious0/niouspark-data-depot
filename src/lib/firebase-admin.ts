@@ -114,5 +114,14 @@ export async function countAdmins(): Promise<number> {
     }
 }
 
+export async function verifyIdToken(idToken: string): Promise<admin.auth.DecodedIdToken> {
+    try {
+        const decodedToken = await adminAuth.verifyIdToken(idToken);
+        return decodedToken;
+    } catch (error) {
+        console.error('Error verifying ID token:', error);
+        throw new Error('Invalid or expired token');
+    }
+}
 
 export { adminDb, adminAuth };

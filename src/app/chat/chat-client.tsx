@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { continueConversation, ChatState } from '@/app/chat/actions';
+import { continueConversation, loadChatState, ChatState } from '@/app/chat/actions';
+import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Bot, Loader2, Send, User, Terminal } from 'lucide-react';
@@ -20,38 +21,41 @@ function SubmitButton() {
 }
 
 const getInitialState = (): ChatState => {
-    if (typeof window !== 'undefined') {
-        const savedMessages = sessionStorage.getItem('chatMessages');
-        if (savedMessages) {
-            try {
-                const messages = JSON.parse(savedMessages);
-                if (Array.isArray(messages)) {
-                    return { messages };
-                }
-            } catch (e) {
-                console.error("Failed to parse chat messages from sessionStorage", e);
-                sessionStorage.removeItem('chatMessages');
-            }
-        }
-    }
-    // Default initial state
+    // For authenticated users, we'll load from server
     return {
-        messages: [{ role: 'assistant', content: "Hello! I'm Niouspark Smart AI. How can I help you today?" }],
+        messages: [{ role: 'assistant', content: "Loading your chat history..." }],
     };
 };
 
-
 export function ChatClient() {
+  const { user, loading: authLoading } = useAuth();
   const [state, formAction, isPending] = useActionState(continueConversation, getInitialState());
+  const [isInitialized, setIsInitialized] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Load persistent chat state when user is available
+  useEffect(() => {
+    if (!authLoading && !isInitialized) {
+      if (user) {
+        // User is authenticated, load from Firestore
+        loadChatState().then((chatState) => {
+          // Replace the initial state with loaded state
+          formAction(new FormData()); // This triggers a re-render with server state
+        }).catch((error) => {
+          console.error('Failed to load chat state:', error);
+        });
+      } else {
+        // User not authenticated, show fallback message
+        // The middleware should have redirected, but just in case
+        console.log('User not authenticated for chat');
+      }
+      setIsInitialized(true);
+    }
+  }, [user, authLoading, isInitialized, formAction]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    // Save messages to session storage whenever they change
-    if (state.messages.length > 0) {
-        sessionStorage.setItem('chatMessages', JSON.stringify(state.messages));
-    }
   }, [state.messages]);
 
   const handleFormAction = (formData: FormData) => {
