@@ -1,8 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState, useTransition } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { continueConversation, loadChatState, ChatState } from '@/app/chat/actions';
+import { continueConversation, ChatState } from '@/app/chat/actions';
 import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,6 @@ import { Bot, Loader2, Send, User, Terminal } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { MessageContent } from '@/components/chat/message-content';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -21,100 +20,66 @@ function SubmitButton() {
   );
 }
 
-export function EnhancedChatClient() {
+const getInitialState = (): ChatState => {
+  return {
+    messages: [{ role: 'assistant', content: "Hello! I'm Niouspark Smart AI. How can I help you today?" }],
+  };
+};
+
+export function SimpleChatClient() {
   const { user, loading: authLoading } = useAuth();
+  const [state, formAction, isPending] = useActionState(continueConversation, getInitialState());
   const [isClient, setIsClient] = useState(false);
-  const [chatState, setChatState] = useState<ChatState>({
-    messages: [{ role: 'assistant', content: 'Loading your chat history...' }]
-  });
-  const [isPending, startTransition] = useTransition();
-  const [formPending, setFormPending] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Prevent hydration mismatches
+  // Prevent hydration mismatch
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Load initial chat state
   useEffect(() => {
-    if (!authLoading && user) {
-      startTransition(async () => {
-        try {
-          const initialState = await loadChatState();
-          setChatState(initialState);
-        } catch (error) {
-          console.error('Failed to load chat state:', error);
-          setChatState({
-            messages: [{ role: 'assistant', content: "Hello! I'm Niouspark Smart AI. How can I help you today?" }],
-            error: 'Failed to load chat history'
-          });
-        }
-      });
-    } else if (!authLoading && !user) {
-      setChatState({
-        messages: [{ role: 'assistant', content: 'Please log in to access the chat.' }],
-        error: 'Authentication required'
-      });
+    if (isClient) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [user, authLoading]);
+  }, [state.messages, isClient]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatState.messages]);
-
-  const handleSubmit = async (formData: FormData) => {
+  const handleFormAction = (formData: FormData) => {
     if (!user) return;
     
     const message = formData.get('message') as string;
-    if (!message.trim()) return;
+    if (!message?.trim()) return;
 
-    setFormPending(true);
+    formAction(formData);
     formRef.current?.reset();
-
-    // Optimistically add user message
-    const userMessage = { role: 'user' as const, content: message };
-    setChatState(prev => ({
-      ...prev,
-      messages: [...prev.messages, userMessage]
-    }));
-
-    try {
-      const newState = await continueConversation(chatState, formData);
-      setChatState(newState);
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      setChatState(prev => ({
-        ...prev,
-        error: 'Failed to send message'
-      }));
-    } finally {
-      setFormPending(false);
-    }
   };
 
-  const handleFormAction = (formData: FormData) => {
-    startTransition(() => handleSubmit(formData));
-  };
-
-  const isLoading = isPending || formPending;
+  if (!isClient) {
+    // Return a simple loading state during SSR
+    return (
+      <div className="flex flex-col h-full">
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
-        {chatState.messages.map((message, index) => (
-          <div key={index} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : 'justify-start')}>
+        {state.messages.map((message, index) => (
+          <div key={`${message.role}-${index}`} className={cn("flex items-start gap-4", message.role === 'user' ? 'justify-end' : 'justify-start')}>
             {message.role === 'assistant' && (
               <Avatar className="h-10 w-10 border-2 border-primary">
                 <AvatarFallback><Bot /></AvatarFallback>
               </Avatar>
             )}
             <div className={cn(
-              "max-w-2xl p-4 rounded-xl shadow",
+              "max-w-lg p-4 rounded-xl shadow",
               message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'
             )}>
-              <MessageContent content={message.content} role={message.role} />
+              <p className="whitespace-pre-wrap">{message.content}</p>
             </div>
             {message.role === 'user' && (
               <Avatar className="h-10 w-10">
@@ -123,7 +88,7 @@ export function EnhancedChatClient() {
             )}
           </div>
         ))}
-        {isLoading && (
+        {isPending && (
           <div className="flex items-start gap-4">
             <Avatar className="h-10 w-10 border-2 border-primary">
               <AvatarFallback><Bot /></AvatarFallback>
@@ -136,12 +101,12 @@ export function EnhancedChatClient() {
         <div ref={messagesEndRef} />
       </div>
 
-      {chatState.error && (
+      {state.error && (
         <div className="p-4 border-t">
           <Alert variant="destructive">
             <Terminal className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{chatState.error}</AlertDescription>
+            <AlertDescription>{state.error}</AlertDescription>
           </Alert>
         </div>
       )}
@@ -151,9 +116,9 @@ export function EnhancedChatClient() {
           <Input
             type="text"
             name="message"
-            placeholder={user ? "Ask anything..." : "Please log in to chat"}
+            placeholder={user && !authLoading ? "Ask anything..." : "Please log in to chat"}
             className="flex-1"
-            disabled={isLoading || !user}
+            disabled={isPending || !user || authLoading}
             autoComplete="off"
           />
           <SubmitButton />

@@ -8,6 +8,7 @@ import {
   getChatContext,
   getChat
 } from "@/lib/chat-service";
+import { validateEnvironment } from "@/lib/env-config";
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -66,6 +67,15 @@ export async function continueConversation(
   if (!userInput) {
     // This case should ideally be handled by client-side validation
     return { ...previousState, error: "Message cannot be empty." };
+  }
+  
+  // Validate environment variables
+  const envValidation = validateEnvironment();
+  if (!envValidation.isValid) {
+    return {
+      ...previousState,
+      error: `AI Chat is temporarily unavailable. Missing configuration: ${envValidation.missing.join(', ')}. Please contact support.`
+    };
   }
   
   try {
