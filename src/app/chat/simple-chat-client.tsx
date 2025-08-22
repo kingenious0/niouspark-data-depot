@@ -29,20 +29,20 @@ const getInitialState = (): ChatState => {
 export function SimpleChatClient() {
   const { user, loading: authLoading } = useAuth();
   const [state, formAction, isPending] = useActionState(continueConversation, getInitialState());
-  const [isClient, setIsClient] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Prevent hydration mismatch
   useEffect(() => {
-    setIsClient(true);
+    setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (isClient) {
+    if (mounted) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [state.messages, isClient]);
+  }, [state.messages, mounted]);
 
   const handleFormAction = (formData: FormData) => {
     if (!user) return;
@@ -54,12 +54,33 @@ export function SimpleChatClient() {
     formRef.current?.reset();
   };
 
-  if (!isClient) {
-    // Return a simple loading state during SSR
+  if (!mounted) {
+    // Return a simple loading state during SSR/hydration
     return (
       <div className="flex flex-col h-full">
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="flex-1 p-4">
+          <div className="flex items-start gap-4 justify-start">
+            <Avatar className="h-10 w-10 border-2 border-primary">
+              <AvatarFallback><Bot /></AvatarFallback>
+            </Avatar>
+            <div className="max-w-lg p-4 rounded-xl bg-muted">
+              <p>Hello! I'm Niouspark Smart AI. How can I help you today?</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4 bg-background border-t">
+          <div className="flex items-center gap-2">
+            <Input
+              type="text"
+              placeholder="Loading..."
+              className="flex-1"
+              disabled
+              autoComplete="off"
+            />
+            <Button size="icon" disabled>
+              <Send className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
       </div>
     );

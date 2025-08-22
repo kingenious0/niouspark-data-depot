@@ -9,6 +9,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import type { AdminTransaction } from "@/lib/datamart";
+import ClientOnly from "@/components/client-only";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface CancellationsCardProps {
     orders: AdminTransaction[];
@@ -43,23 +45,25 @@ export default function CancellationsCard({ orders }: CancellationsCardProps) {
             </CardHeader>
             <CardContent>
                 <div className="h-48">
-                    <ChartContainer config={chartConfig} className="w-full h-full [&>div]:aspect-auto [&>div]:h-full">
-                        <PieChart>
-                            <ChartTooltip
-                                cursor={false}
-                                content={<ChartTooltipContent hideLabel />}
-                            />
-                            <Pie 
-                                data={data} 
-                                dataKey="value" 
-                                nameKey="name" 
-                                cx="50%" 
-                                cy="50%" 
-                                outerRadius={60} 
-                                innerRadius={40}
-                            />
-                        </PieChart>
-                    </ChartContainer>
+                    <ClientOnly fallback={<Skeleton className="w-full h-full rounded-full" />}>
+                        <ChartContainer config={chartConfig} className="w-full h-full [&>div]:aspect-auto [&>div]:h-full">
+                            <PieChart>
+                                <ChartTooltip
+                                    cursor={false}
+                                    content={<ChartTooltipContent hideLabel />}
+                                />
+                                <Pie 
+                                    data={data} 
+                                    dataKey="value" 
+                                    nameKey="name" 
+                                    cx="50%" 
+                                    cy="50%" 
+                                    outerRadius={60} 
+                                    innerRadius={40}
+                                />
+                            </PieChart>
+                        </ChartContainer>
+                    </ClientOnly>
                 </div>
                  <div className="mt-4 space-y-2 text-sm">
                     <div className="flex items-center justify-between">

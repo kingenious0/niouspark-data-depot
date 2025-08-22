@@ -10,6 +10,8 @@ import {
 import { DollarSign } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts"
 import DashboardCard from "./dashboard-card"
+import ClientOnly from "@/components/client-only"
+import { Skeleton } from "@/components/ui/skeleton"
 
 const chartData = [
   { month: "January", desktop: 186, mobile: 80 },
@@ -43,24 +45,26 @@ export default function SalesCard({ value }: SalesCardProps) {
         className="md:col-span-2"
     >
       <div className="h-32 -ml-4">
-        <ChartContainer config={chartConfig} className="w-full h-full [&>div]:aspect-auto [&>div]:h-full">
-          <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted-foreground/20" />
-            <XAxis
-              dataKey="month"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) => value.slice(0, 3)}
-              className="text-xs"
-            />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="dot" />}
-            />
-            <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
-          </BarChart>
-        </ChartContainer>
+        <ClientOnly fallback={<Skeleton className="w-full h-full" />}>
+          <ChartContainer config={chartConfig} className="w-full h-full [&>div]:aspect-auto [&>div]:h-full">
+            <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+              <CartesianGrid vertical={false} strokeDasharray="3 3" className="stroke-muted-foreground/20" />
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                tickFormatter={(value) => value.slice(0, 3)}
+                className="text-xs"
+              />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent indicator="dot" />}
+              />
+              <Bar dataKey="desktop" fill="var(--color-desktop)" radius={4} />
+            </BarChart>
+          </ChartContainer>
+        </ClientOnly>
       </div>
     </DashboardCard>
   )

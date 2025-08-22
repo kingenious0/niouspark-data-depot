@@ -24,6 +24,15 @@ export interface ChatState {
 // New action to load initial chat state
 export async function loadChatState(): Promise<ChatState> {
   try {
+    // Validate environment first
+    const envValidation = validateEnvironment();
+    if (!envValidation.isValid) {
+      return {
+        messages: [{ role: 'assistant', content: "Hello! AI Chat is currently unavailable due to missing configuration. Please contact support." }],
+        error: `Missing configuration: ${envValidation.missing.join(', ')}`
+      };
+    }
+
     const userId = await getCurrentUserId();
     if (!userId) {
       return { 
@@ -38,7 +47,12 @@ export async function loadChatState(): Promise<ChatState> {
     if (!chatData || chatData.messages.length === 0) {
       // New chat, add welcome message
       const welcomeMessage = { role: 'assistant' as const, content: "Hello! I'm Niouspark Smart AI. How can I help you today?" };
-      await addMessageToChat(userId, chatId, welcomeMessage);
+      try {
+        await addMessageToChat(userId, chatId, welcomeMessage);
+      } catch (addError) {
+        console.error('Error adding welcome message:', addError);
+        // Continue anyway with local message
+      }
       return { 
         messages: [welcomeMessage], 
         chatId 
@@ -53,7 +67,7 @@ export async function loadChatState(): Promise<ChatState> {
     console.error('Error loading chat state:', error);
     return { 
       messages: [{ role: 'assistant', content: "Hello! I'm Niouspark Smart AI. How can I help you today?" }],
-      error: "Failed to load chat history"
+      error: "Failed to load chat history. Starting fresh."
     };
   }
 }
@@ -63,22 +77,20 @@ export async function continueConversation(
   previousState: ChatState,
   formData: FormData
 ): Promise<ChatState> {
-  const userInput = formData.get('message') as string;
-  if (!userInput) {
-    // This case should ideally be handled by client-side validation
-    return { ...previousState, error: "Message cannot be empty." };
-  }
-  
-  // Validate environment variables
-  const envValidation = validateEnvironment();
-  if (!envValidation.isValid) {
-    return {
-      ...previousState,
-      error: `AI Chat is temporarily unavailable. Missing configuration: ${envValidation.missing.join(', ')}. Please contact support.`
-    };
-  }
-  
   try {
+    const userInput = formData.get('message') as string;
+    if (!userInput || !userInput.trim()) {
+      return { ...previousState, error: "Message cannot be empty." };
+    }
+    
+    // Validate environment variables first
+    const envValidation = validateEnvironment();
+    if (!envValidation.isValid) {
+      return {
+        ...previousState,
+        error: `AI Chat is temporarily unavailable. Missing configuration: ${envValidation.missing.join(', ')}. Please contact support.`
+      };
+    }
     const userId = await getCurrentUserId();
     if (!userId) {
       return { 
@@ -117,7 +129,26 @@ export async function continueConversation(
     return { messages, chatId };
   } catch (e: any) {
     console.error("Error continuing conversation:", e);
-    const errorMessage = e.message || "An unexpected error occurred.";
+    
+    // Handle specific error types
+    let errorMessage = "An unexpected error occurred. Please try again.";
+    
+    if (e.message) {
+      if (e.message.includes('auth') || e.message.includes('unauthorized')) {
+        errorMessage = "Authentication error. Please log out and log back in.";
+      } else if (e.message.includes('network') || e.message.includes('fetch')) {
+        errorMessage = "Network error. Please check your connection and try again.";
+      } else if (e.message.includes('quota') || e.message.includes('limit')) {
+        errorMessage = "Service temporarily unavailable due to high demand. Please try again later.";
+      } else if (e.message.includes('firebase') || e.message.includes('firestore')) {
+        errorMessage = "Database error. Please try again in a moment.";
+      } else {
+        errorMessage = "AI service is temporarily unavailable. Please try again later.";
+      }
+    }
+    
     return { ...previousState, error: errorMessage };
+  } finally {
+    // Ensure we always return a valid state
   }
 }

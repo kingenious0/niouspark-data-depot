@@ -4,13 +4,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Menu, LogOut, Loader2, Cpu, Shield, MessageCircle } from "lucide-react";
-import Logo from "./logo";
+import LogoIcon from "./logo-icon";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useAuth, logout } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "./theme-toggle";
-import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -33,11 +32,6 @@ const Header = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -70,7 +64,7 @@ const Header = () => {
        <SheetTitle className="sr-only">Mobile Navigation Menu</SheetTitle>
        <div className="flex flex-col gap-6 p-6">
         <Link href="/" className="flex items-center gap-2">
-          <Logo />
+          <LogoIcon />
         </Link>
         <nav className="flex flex-col gap-4">
           {navLinks.map((link) => (
@@ -125,7 +119,7 @@ const Header = () => {
     <header className="sticky top-0 z-50 w-full border-b bg-card/95 backdrop-blur-sm flex-shrink-0">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-6">
         <Link href="/" className="flex items-center gap-2">
-          <Logo />
+          <LogoIcon />
         </Link>
         <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => (
@@ -148,83 +142,73 @@ const Header = () => {
           ))}
         </nav>
         
-         <div className="flex items-center gap-2">
-            {isClient ? (
-              <>
-                <div className="hidden md:flex items-center gap-4">
-                  {loading ? (
-                    <div className="w-20 h-9 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+         <div className="flex items-center gap-2" suppressHydrationWarning>
+            <div className="hidden md:flex items-center gap-4">
+              {loading ? (
+                <div className="w-20 h-9 flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
+              ) : (
+                <>
+                  {user ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+                                <Avatar>
+                                    <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
+                                    <AvatarFallback>{getAvatarFallback(user.displayName)}</AvatarFallback>
+                                </Avatar>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-56" align="end" forceMount>
+                            <DropdownMenuLabel className="font-normal">
+                                <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                                </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => router.push('/account')}>
+                                Account
+                            </DropdownMenuItem>
+                            {isAdmin && (
+                                <DropdownMenuItem onClick={() => router.push('/admin')}>
+                                    <Shield className="mr-2 h-4 w-4" />
+                                    Admin
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleLogout}>
+                                <LogOut className="mr-2 h-4 w-4" />
+                                <span>Log out</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                   ) : (
                     <>
-                      {user ? (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                                    <Avatar>
-                                        <AvatarImage src={user.photoURL || ''} alt={user.displayName || 'User'} />
-                                        <AvatarFallback>{getAvatarFallback(user.displayName)}</AvatarFallback>
-                                    </Avatar>
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent className="w-56" align="end" forceMount>
-                                <DropdownMenuLabel className="font-normal">
-                                    <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{user.displayName}</p>
-                                        <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
-                                    </div>
-                                </DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => router.push('/account')}>
-                                    Account
-                                </DropdownMenuItem>
-                                {isAdmin && (
-                                    <DropdownMenuItem onClick={() => router.push('/admin')}>
-                                        <Shield className="mr-2 h-4 w-4" />
-                                        Admin
-                                    </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={handleLogout}>
-                                    <LogOut className="mr-2 h-4 w-4" />
-                                    <span>Log out</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                      ) : (
-                        <>
-                          <Button asChild variant="ghost" size="sm">
-                            <Link href="/login">Login</Link>
-                          </Button>
-                          <Button asChild size="sm">
-                            <Link href="/signup">Sign Up</Link>
-                          </Button>
-                        </>
-                      )}
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href="/login">Login</Link>
+                      </Button>
+                      <Button asChild size="sm">
+                        <Link href="/signup">Sign Up</Link>
+                      </Button>
                     </>
                   )}
-                </div>
-                <ThemeToggle />
-                <div className="md:hidden">
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="icon">
-                        <Menu className="h-6 w-6" />
-                        <span className="sr-only">Open menu</span>
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent side="right" className="p-0">
-                      <MobileNavContent />
-                    </SheetContent>
-                  </Sheet>
-                </div>
-              </>
-            ) : (
-                 <div className="flex items-center gap-2">
-                    <Skeleton className="hidden md:block h-9 w-20" />
-                    <Skeleton className="hidden md:block h-9 w-20" />
-                    <Skeleton className="h-10 w-10" />
-                 </div>
-            )}
+                </>
+              )}
+            </div>
+            <ThemeToggle />
+            <div className="md:hidden">
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="icon">
+                    <Menu className="h-6 w-6" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="right" className="p-0">
+                  <MobileNavContent />
+                </SheetContent>
+              </Sheet>
+            </div>
         </div>
       </div>
     </header>
