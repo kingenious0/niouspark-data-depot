@@ -141,10 +141,22 @@ export async function continueConversation(
     
     // Call AI with context
     console.log('Calling AI chat function...');
-    const aiResponse = await chat({
+    console.log('userInput:', userInput);
+    console.log('context before processing:', context);
+    
+    const processedContext = context.slice(-8).map(msg => ({ 
+      role: msg.role, 
+      content: msg.content 
+    }));
+    console.log('processedContext:', processedContext);
+    
+    const chatInput = {
       prompt: userInput,
-      context: context.slice(-8).map(msg => ({ role: msg.role, content: msg.content }))
-    });
+      context: processedContext
+    };
+    console.log('Final chat input object:', chatInput);
+    
+    const aiResponse = await chat(chatInput);
     console.log('AI response received:', aiResponse ? 'success' : 'failed');
     
     // Add AI response to Firestore

@@ -52,7 +52,13 @@ Your Personality:
 
 export async function chat(input: ChatInput): Promise<ChatOutput> {
   try {
-    console.log('Starting chat flow with input:', input.prompt.substring(0, 100));
+    console.log('Starting chat flow with input:', input);
+    console.log('Input prompt:', input?.prompt ? input.prompt.substring(0, 100) : 'undefined');
+    
+    if (!input || !input.prompt) {
+      throw new Error('Invalid input: prompt is required');
+    }
+    
     const result = await chatFlow(input);
     console.log('Chat flow completed successfully');
     return result;
