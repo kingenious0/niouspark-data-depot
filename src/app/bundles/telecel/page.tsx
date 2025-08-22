@@ -44,7 +44,7 @@ export default async function TelecelBundlesPage() {
                 name: `${bundle.capacity}GB Bundle`,
                 data: `${bundle.mb} MB`,
                 price: parseFloat(bundle.price),
-                validity: '30 Days',
+                validity: 'Non-Expiry',
                 available: bundle.available !== false // Default to available if not explicitly false
             }} />
           ))}

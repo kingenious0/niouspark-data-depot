@@ -25,7 +25,7 @@ export default async function AirteltigoBundlesPage() {
                 name: `${bundle.capacity}GB Bundle`,
                 data: `${bundle.mb} MB`,
                 price: parseFloat(bundle.price),
-                validity: "30 Days",
+                validity: "Non-Expiry",
               }}
             />
           ))}
