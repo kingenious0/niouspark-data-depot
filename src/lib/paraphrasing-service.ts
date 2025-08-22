@@ -126,12 +126,13 @@ export async function paraphraseText(request: ParaphraseRequest): Promise<Paraph
 }
 
 /**
- * Extract text from different file types
+ * Extract text from different file types (server-side only)
  */
 export async function extractTextFromFile(file: File): Promise<{ success: boolean; text?: string; error?: string }> {
   try {
     const fileType = file.type;
     const fileName = file.name.toLowerCase();
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
 
     // Text files
     if (fileType === 'text/plain' || fileName.endsWith('.txt')) {
@@ -139,12 +140,39 @@ export async function extractTextFromFile(file: File): Promise<{ success: boolea
       return { success: true, text };
     }
 
-    // For now, we'll support only TXT files on the frontend
-    // PDF and DOCX parsing will be added in the backend API endpoint
-    
+    // PDF files
+    if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+      try {
+        const pdf = require('pdf-parse');
+        const data = await pdf(fileBuffer);
+        return { success: true, text: data.text };
+      } catch (error) {
+        console.error('PDF parsing error:', error);
+        return {
+          success: false,
+          error: 'Failed to extract text from PDF. The PDF might be encrypted or corrupted.'
+        };
+      }
+    }
+
+    // DOCX files
+    if (fileType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileName.endsWith('.docx')) {
+      try {
+        const mammoth = require('mammoth');
+        const result = await mammoth.extractRawText({ buffer: fileBuffer });
+        return { success: true, text: result.value };
+      } catch (error) {
+        console.error('DOCX parsing error:', error);
+        return {
+          success: false,
+          error: 'Failed to extract text from DOCX file. The file might be corrupted or password-protected.'
+        };
+      }
+    }
+
     return {
       success: false,
-      error: `File type not supported for client-side processing: ${fileType}. Please use the server upload feature.`
+      error: `Unsupported file type: ${fileType}. Please use TXT, PDF, or DOCX files.`
     };
 
   } catch (error) {

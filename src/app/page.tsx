@@ -1,25 +1,48 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Cpu, ShieldCheck, Wifi } from 'lucide-react';
+import { CheckCircle, Cpu, ShieldCheck, Wifi, Wand2, FileText, Zap, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
 export default function Home() {
-  const features = [
+  const mainServices = [
     {
-      icon: <Wifi className="h-10 w-10 text-primary" />,
-      title: 'Wide Selection',
-      description: 'Choose from a variety of data bundles tailored to your needs, from daily plans to monthly subscriptions.',
+      icon: <Wifi className="h-16 w-16 text-blue-600" />,
+      title: 'Data Bundles',
+      subtitle: 'Stay Connected',
+      description: 'Purchase affordable data bundles for all major networks in Ghana. Fast, reliable, and instant delivery.',
+      features: ['Multiple Networks', 'Instant Delivery', 'Secure Payment'],
+      buttonText: 'Browse Bundles',
+      buttonHref: '/bundles',
+      gradient: 'from-blue-500 to-cyan-500'
     },
     {
-      icon: <Cpu className="h-10 w-10 text-primary" />,
-      title: 'AI-Powered Predictions',
-      description: 'Leverage our cutting-edge AI to forecast the most popular data bundles, helping you make smarter choices.',
+      icon: <Wand2 className="h-16 w-16 text-purple-600" />,
+      title: 'AI Paraphraser',
+      subtitle: 'Transform Your Text',
+      description: 'Advanced AI-powered text paraphrasing and humanization. Perfect for students, writers, and professionals.',
+      features: ['PDF/DOCX Support', 'Multiple Modes', 'Human-like Output'],
+      buttonText: 'Try AI Paraphraser',
+      buttonHref: '/paraphraser',
+      gradient: 'from-purple-500 to-pink-500'
+    }
+  ];
+
+  const features = [
+    {
+      icon: <Zap className="h-10 w-10 text-primary" />,
+      title: 'Lightning Fast',
+      description: 'Get instant results whether you\'re buying data or paraphrasing text.',
     },
     {
       icon: <ShieldCheck className="h-10 w-10 text-primary" />,
-      title: 'Secure & Instant',
-      description: 'Enjoy a seamless and secure purchasing experience with instant delivery of your data bundles.',
+      title: 'Secure & Private',
+      description: 'Your data and documents are processed securely with complete privacy.',
+    },
+    {
+      icon: <Cpu className="h-10 w-10 text-primary" />,
+      title: 'AI-Powered',
+      description: 'Leverage cutting-edge AI technology for smarter predictions and better results.',
     },
   ];
 
@@ -27,8 +50,8 @@ export default function Home() {
     <div className="flex flex-col">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full h-[60vh] md:h-[80vh] flex items-center justify-center text-center overflow-hidden">
-          <div className="absolute inset-0 bg-primary/20 z-10"></div>
+        <section className="relative w-full h-[70vh] md:h-[90vh] flex items-center justify-center text-center overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/30 via-purple-600/30 to-pink-600/30 z-10"></div>
           <video
             src="https://cdn.pixabay.com/video/2022/06/04/119290-717347154_tiny.mp4"
             autoPlay
@@ -38,21 +61,79 @@ export default function Home() {
             className="absolute z-0 w-auto min-w-full min-h-full max-w-none object-cover"
           ></video>
           <div className="container mx-auto px-4 md:px-6 relative z-10 text-white">
-            <div className="max-w-3xl mx-auto">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold font-headline tracking-tight">
-                Stay Connected with Niouspark Data Bundles
+            <div className="max-w-4xl mx-auto">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold font-headline tracking-tight mb-6">
+                Your All-in-One Digital Platform
               </h1>
-              <p className="mt-4 text-lg md:text-xl text-white/90">
-                The fastest, most reliable, and affordable data bundles right at your fingertips.
+              <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
+                Stay connected with affordable data bundles and transform your text with AI-powered paraphrasing.
               </p>
-              <div className="mt-8 flex justify-center gap-4">
-                <Button asChild size="lg" className="font-bold">
-                  <Link href="/bundles">Browse Bundles</Link>
+              <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
+                <Button asChild size="lg" className="font-bold text-lg px-8 py-3">
+                  <Link href="/bundles">
+                    <Wifi className="mr-2 h-5 w-5" />
+                    Data Bundles
+                  </Link>
                 </Button>
-                <Button asChild size="lg" variant="secondary" className="font-bold text-primary">
-                  <Link href="/signup">Create Account</Link>
+                <Button asChild size="lg" variant="secondary" className="font-bold text-lg px-8 py-3 text-primary">
+                  <Link href="/paraphraser">
+                    <Wand2 className="mr-2 h-5 w-5" />
+                    AI Paraphraser
+                  </Link>
                 </Button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Main Services Section */}
+        <section className="w-full py-20 md:py-32 bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="container mx-auto px-4 md:px-6">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl md:text-5xl font-bold font-headline mb-4">
+                Choose Your Service
+              </h2>
+              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                Whether you need to stay connected or transform your text, we've got you covered.
+              </p>
+            </div>
+            <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+              {mainServices.map((service, index) => (
+                <Card key={index} className="group relative overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${service.gradient} opacity-5 group-hover:opacity-10 transition-opacity duration-300`}></div>
+                  <CardContent className="p-8 md:p-12">
+                    <div className="flex flex-col items-center text-center space-y-6">
+                      <div className="bg-white rounded-full p-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        {service.icon}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                          {service.subtitle}
+                        </p>
+                        <h3 className="text-3xl md:text-4xl font-bold font-headline mb-4">
+                          {service.title}
+                        </h3>
+                        <p className="text-lg text-muted-foreground mb-6 max-w-md">
+                          {service.description}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap justify-center gap-2 mb-6">
+                        {service.features.map((feature, idx) => (
+                          <span key={idx} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
+                            {feature}
+                          </span>
+                        ))}
+                      </div>
+                      <Button asChild size="lg" className="font-bold group-hover:scale-105 transition-transform duration-300">
+                        <Link href={service.buttonHref}>
+                          {service.buttonText}
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </section>

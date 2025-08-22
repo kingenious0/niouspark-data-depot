@@ -50,29 +50,50 @@ export default function ParaphraserPage() {
     if (!file) return;
 
     // Check file type
-    const allowedTypes = ['text/plain'];
-    const allowedExtensions = ['.txt'];
+    const allowedTypes = ['text/plain', 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const allowedExtensions = ['.txt', '.pdf', '.docx'];
     const fileName = file.name.toLowerCase();
     
     if (!allowedTypes.includes(file.type) && !allowedExtensions.some(ext => fileName.endsWith(ext))) {
       toast({
         title: "Unsupported File Type",
-        description: "Currently only TXT files are supported. PDF and DOCX support coming soon!",
+        description: "Please use TXT, PDF, or DOCX files only.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      toast({
+        title: "File Too Large",
+        description: "File size must be less than 10MB.",
         variant: "destructive"
       });
       return;
     }
 
     try {
-      const text = await file.text();
-      setInputText(text);
-      setWordCount(countWords(text));
       setSelectedFile(file);
       
-      toast({
-        title: "File Loaded",
-        description: `Successfully loaded ${file.name} (${countWords(text)} words)`
-      });
+      // For TXT files, extract text immediately on client side
+      if (file.type === 'text/plain' || fileName.endsWith('.txt')) {
+        const text = await file.text();
+        setInputText(text);
+        setWordCount(countWords(text));
+        
+        toast({
+          title: "File Loaded",
+          description: `Successfully loaded ${file.name} (${countWords(text)} words)`
+        });
+      } else {
+        // For PDF/DOCX files, we'll extract text on the server when processing
+        toast({
+          title: "File Selected",
+          description: `${file.name} selected. Text will be extracted when you process the file.`
+        });
+      }
     } catch (error) {
       toast({
         title: "File Load Error",
@@ -83,16 +104,20 @@ export default function ParaphraserPage() {
   };
 
   const handleParaphrase = async () => {
-    if (!inputText.trim()) {
+    // Check if we have a file that needs server-side processing
+    const needsFileProcessing = selectedFile && !inputText.trim() && 
+      (selectedFile.name.toLowerCase().endsWith('.pdf') || selectedFile.name.toLowerCase().endsWith('.docx'));
+
+    if (!inputText.trim() && !needsFileProcessing) {
       toast({
         title: "No Text",
-        description: "Please enter some text to paraphrase.",
+        description: "Please enter some text or select a file to paraphrase.",
         variant: "destructive"
       });
       return;
     }
 
-    if (wordCount > WORD_LIMIT) {
+    if (inputText.trim() && wordCount > WORD_LIMIT) {
       toast({
         title: "Text Too Long",
         description: `Please limit your text to ${WORD_LIMIT} words. Current: ${wordCount} words.`,
@@ -110,18 +135,37 @@ export default function ParaphraserPage() {
         throw new Error("Authentication required. Please log in.");
       }
 
-      const response = await fetch('/api/paraphrase', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        },
-        body: JSON.stringify({
-          text: inputText,
-          mode,
-          tone
-        })
-      });
+      let response;
+      
+      // Handle file upload (PDF/DOCX)
+      if (needsFileProcessing) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('tone', tone);
+        formData.append('mode', mode);
+
+        response = await fetch('/api/paraphrase', {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: formData
+        });
+      } else {
+        // Handle text input
+        response = await fetch('/api/paraphrase', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: JSON.stringify({
+            text: inputText,
+            mode,
+            tone
+          })
+        });
+      }
 
       const result = await response.json();
 
@@ -131,9 +175,18 @@ export default function ParaphraserPage() {
 
       if (result.success && result.paraphrasedText) {
         setOutputText(result.paraphrasedText);
+        
+        // If we processed a file, update the input text with extracted content
+        if (needsFileProcessing) {
+          setInputText(result.originalText);
+          setWordCount(countWords(result.originalText));
+        }
+        
         toast({
           title: "Success!",
-          description: `Text paraphrased successfully (${result.wordCount} words processed)`
+          description: needsFileProcessing 
+            ? `File processed and paraphrased successfully (${result.wordCount} words)` 
+            : `Text paraphrased successfully (${result.wordCount} words processed)`
         });
       } else {
         throw new Error(result.error || 'No paraphrased text received');
@@ -223,9 +276,14 @@ export default function ParaphraserPage() {
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Header */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold font-headline tracking-tight mb-4">
-          AI Text Paraphraser & Humanizer
-        </h1>
+        <div className="mb-4">
+          <p className="text-lg text-muted-foreground mb-2">
+            Hello, <span className="font-semibold text-foreground">{user.displayName || user.email?.split('@')[0] || 'User'}</span>! 👋
+          </p>
+          <h1 className="text-4xl font-bold font-headline tracking-tight">
+            AI Text Paraphraser & Humanizer
+          </h1>
+        </div>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           Transform your text with AI-powered paraphrasing. Make content more natural, avoid plagiarism, and improve readability.
         </p>
@@ -240,7 +298,7 @@ export default function ParaphraserPage() {
               Input Text
             </CardTitle>
             <CardDescription>
-              Enter your text or upload a file (TXT supported)
+              Enter your text or upload a file (TXT, PDF, DOCX supported)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -251,7 +309,7 @@ export default function ParaphraserPage() {
                 <Input
                   id="file-upload"
                   type="file"
-                  accept=".txt,text/plain"
+                  accept=".txt,.pdf,.docx,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   onChange={handleFileSelect}
                   className="flex-1"
                 />
@@ -314,7 +372,7 @@ export default function ParaphraserPage() {
             <div className="flex gap-2">
               <Button 
                 onClick={handleParaphrase} 
-                disabled={isProcessing || !inputText.trim() || wordCount > WORD_LIMIT}
+                disabled={isProcessing || (!inputText.trim() && !selectedFile) || (inputText.trim() && wordCount > WORD_LIMIT)}
                 className="flex-1"
               >
                 {isProcessing ? (

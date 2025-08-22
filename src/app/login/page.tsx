@@ -26,7 +26,7 @@ import { useState } from "react";
 import { login, sendPasswordReset, signInWithGoogle } from "@/lib/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import { Loader2 } from "lucide-react";
+import { Loader2, Wifi, Wand2, ArrowRight } from "lucide-react";
 import { FirebaseError } from "firebase/app";
 import Image from "next/image";
 
@@ -256,19 +256,47 @@ export default function LoginPage() {
           </form>
         </Card>
       </div>
-       <div className="hidden bg-muted lg:block relative">
-        <Image
-          src="/system icon..png"
-          alt="Abstract background image"
-          fill
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className="object-cover"
-          data-ai-hint="system icon"
-        />
-         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-         <div className="absolute bottom-10 left-10 text-white">
-            <h2 className="text-5xl font-bold">Log in to get your ideas</h2>
-            <p className="text-xl mt-2">The best place for data deals.</p>
+       <div className="hidden bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 lg:block relative">
+         <div className="absolute inset-0 bg-black/40" />
+         <div className="absolute inset-0 flex flex-col justify-center items-center text-white p-10">
+            <div className="text-center mb-12">
+              <h2 className="text-5xl font-bold mb-4">Welcome to Niouspark</h2>
+              <p className="text-xl opacity-90">Your all-in-one digital platform</p>
+            </div>
+            
+            <div className="space-y-6 w-full max-w-md">
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-blue-500 rounded-full p-3">
+                    <Wifi className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Data Bundles</h3>
+                    <p className="text-sm opacity-80">Affordable data for all networks</p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 opacity-60" />
+                </div>
+              </div>
+              
+              <div className="bg-white/10 backdrop-blur-sm rounded-lg p-6 border border-white/20">
+                <div className="flex items-center space-x-4">
+                  <div className="bg-purple-500 rounded-full p-3">
+                    <Wand2 className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">AI Paraphraser</h3>
+                    <p className="text-sm opacity-80">Transform text with AI power</p>
+                  </div>
+                  <ArrowRight className="h-5 w-5 opacity-60" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 text-center">
+              <p className="text-sm opacity-75">
+                Join thousands of satisfied customers
+              </p>
+            </div>
          </div>
       </div>
     </div>

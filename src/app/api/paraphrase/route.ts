@@ -82,7 +82,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
     
-    await adminAuth.verifyIdToken(idToken);
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+    const userId = decodedToken.uid;
 
     // Get the uploaded file
     const formData = await request.formData();
@@ -94,11 +95,55 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
-    // For now, return a placeholder response
-    // TODO: Implement PDF/DOCX parsing with libraries like pdf-parse or mammoth
-    return NextResponse.json({ 
-      error: "File upload processing not yet implemented. Please paste text directly for now." 
-    }, { status: 501 });
+    // Validate file size (max 10MB)
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    if (file.size > maxSize) {
+      return NextResponse.json({ 
+        error: "File too large. Maximum file size is 10MB." 
+      }, { status: 400 });
+    }
+
+    // Validate tone and mode
+    if (!VALID_TONES.includes(tone as any)) {
+      return NextResponse.json({ error: `Invalid tone. Must be: ${VALID_TONES.join(', ')}` }, { status: 400 });
+    }
+    
+    if (!VALID_MODES.includes(mode as any)) {
+      return NextResponse.json({ error: `Invalid mode. Must be: ${VALID_MODES.join(', ')}` }, { status: 400 });
+    }
+
+    console.log(`User ${userId} uploading file: ${file.name} (${file.size} bytes)`);
+
+    // Extract text from file
+    const { extractTextFromFile } = await import('@/lib/paraphrasing-service');
+    const extractResult = await extractTextFromFile(file);
+
+    if (!extractResult.success || !extractResult.text) {
+      return NextResponse.json({ 
+        success: false,
+        error: extractResult.error || 'Failed to extract text from file'
+      }, { status: 400 });
+    }
+
+    console.log(`Extracted ${extractResult.text.length} characters from ${file.name}`);
+
+    // Process the extracted text
+    const result = await paraphraseText({ 
+      text: extractResult.text, 
+      tone: tone as any, 
+      mode: mode as any 
+    });
+
+    // Log usage for analytics (don't await to avoid slowing response)
+    if (result.success) {
+      logParaphraseUsage(userId, result.wordCount, mode, tone);
+    }
+
+    return NextResponse.json({
+      ...result,
+      fileName: file.name,
+      fileSize: file.size
+    });
 
   } catch (error: any) {
     console.error("Error in file upload API:", error);
