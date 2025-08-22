@@ -14,6 +14,18 @@ type DatamartBundlesResponse = {
     message?: string;
 }
 
+// New API response format - returns all networks in one call
+type NewDatamartBundlesResponse = {
+    status: 'success' | 'error';
+    data: {
+        TELECEL: DatamartBundle[];
+        YELLO: DatamartBundle[];
+        AT_PREMIUM: DatamartBundle[];
+        at?: DatamartBundle[]; // The API also returns 'at' network
+    };
+    message?: string;
+}
+
 export type TransactionStatus =
   | 'completed'
   | 'pending'
@@ -43,7 +55,7 @@ export type AdminTransaction = Transaction & {
     email?: string;
 }
 
-const DATAMART_BASE_URL = 'https://datamartbackened.onrender.com/api/developer';
+const DATAMART_BASE_URL = 'https://api.datamartgh.shop/api/developer';
 const API_TIMEOUT = 8000; // 8 seconds
 
 const getApiKey = () => {
@@ -74,7 +86,9 @@ export async function fetchBundles(network: 'TELECEL' | 'YELLO' | 'AT_PREMIUM'):
     try {
         const apiKey = getApiKey();
         if (!apiKey) return [];
-        const response = await fetchWithTimeout(`${DATAMART_BASE_URL}/data-packages?network=${network}`, {
+        
+        // The new API returns all networks in one call, no network query parameter needed
+        const response = await fetchWithTimeout(`${DATAMART_BASE_URL}/data-packages`, {
             headers: {
                 'X-API-Key': apiKey,
             },
@@ -83,14 +97,21 @@ export async function fetchBundles(network: 'TELECEL' | 'YELLO' | 'AT_PREMIUM'):
 
         if (!response.ok) {
             const errorBody = await response.text();
-            console.error(`Failed to fetch ${network} bundles. Status: ${response.status}, Body: ${errorBody}`);
+            console.error(`Failed to fetch bundles. Status: ${response.status}, Body: ${errorBody}`);
             return [];
         }
 
-        const result: DatamartBundlesResponse = await response.json();
+        const result: NewDatamartBundlesResponse = await response.json();
 
         if (result.status === 'success') {
-            return result.data;
+            // Extract the specific network's bundles from the response
+            const networkBundles = result.data[network] || [];
+            
+            // Ensure all bundles have the correct network field set
+            return networkBundles.map(bundle => ({
+                ...bundle,
+                network: network
+            }));
         } else {
             console.error(`API error for ${network}: ${result.message}`);
             return [];
