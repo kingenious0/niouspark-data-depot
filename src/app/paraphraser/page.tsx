@@ -552,7 +552,7 @@ export default function ParaphraserPage() {
                     <div className="flex items-center gap-2 mb-3">
                       <BarChart3 className="h-4 w-4 text-blue-600" />
                       <h4 className="font-semibold text-blue-800 dark:text-blue-200">
-                        Human-likeness Analysis
+                        Enhanced Human-likeness Analysis
                       </h4>
                     </div>
 
@@ -579,6 +579,56 @@ export default function ParaphraserPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Enhanced Metrics */}
+                    {humanLikenessAnalysis.factors.perplexity && (
+                      <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                        <div className="font-medium text-blue-700 dark:text-blue-300 mb-2">Research-Based Metrics</div>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <div className="text-blue-600 dark:text-blue-400">Perplexity (Unpredictability)</div>
+                            <div className="font-semibold">{(humanLikenessAnalysis.factors.perplexity * 100).toFixed(1)}%</div>
+                          </div>
+                          <div>
+                            <div className="text-blue-600 dark:text-blue-400">Burstiness (Variation)</div>
+                            <div className="font-semibold">{(humanLikenessAnalysis.factors.burstiness * 100).toFixed(1)}%</div>
+                          </div>
+                          <div>
+                            <div className="text-blue-600 dark:text-blue-400">Readability (Flesch)</div>
+                            <div className="font-semibold">{(humanLikenessAnalysis.factors.readability * 100).toFixed(1)}%</div>
+                          </div>
+                          <div>
+                            <div className="text-blue-600 dark:text-blue-400">Jargon-Free</div>
+                            <div className="font-semibold">{(humanLikenessAnalysis.factors.jargonFree * 100).toFixed(1)}%</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI Detection Insights */}
+                    {humanLikenessAnalysis.insights && (
+                      <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                        <div className="font-medium text-blue-700 dark:text-blue-300 mb-2">AI Detection Insights</div>
+                        <div className="grid grid-cols-2 gap-3 text-xs">
+                          <div>
+                            <div className="text-blue-600 dark:text-blue-400">AI Jargon Found</div>
+                            <div className="font-semibold">{humanLikenessAnalysis.insights.aiJargonCount}</div>
+                          </div>
+                          <div>
+                            <div className="text-blue-600 dark:text-blue-400">Passive Voice</div>
+                            <div className="font-semibold">{humanLikenessAnalysis.insights.passiveVoiceCount}</div>
+                          </div>
+                          <div>
+                            <div className="text-blue-600 dark:text-blue-400">Emotional Resonance</div>
+                            <div className="font-semibold">{(humanLikenessAnalysis.insights.emotionalResonance * 100).toFixed(1)}%</div>
+                          </div>
+                          <div>
+                            <div className="text-blue-600 dark:text-blue-400">Personal Touch</div>
+                            <div className="font-semibold">{(humanLikenessAnalysis.insights.personalTouch * 100).toFixed(1)}%</div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -632,39 +682,39 @@ export default function ParaphraserPage() {
           {/* AI Detector Resistance Features */}
           <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <h4 className="font-semibold mb-3 text-green-800 dark:text-green-200">
-              🛡️ Ultra AI Detector Resistance Features
+              🛡️ Research-Based AI Detector Resistance
             </h4>
             <div className="grid md:grid-cols-3 gap-4 text-sm">
               <div>
-                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Deep Text Cleaning</h5>
+                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Perplexity & Burstiness</h5>
                 <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
-                  <li>• Remove emojis & Unicode artifacts</li>
-                  <li>• Strip markdown & HTML formatting</li>
-                  <li>• Clean code blocks & lists</li>
-                  <li>• Normalize whitespace & structure</li>
+                  <li>• High perplexity (unpredictability)</li>
+                  <li>• Variable sentence lengths</li>
+                  <li>• Natural burstiness patterns</li>
+                  <li>• Research-proven human markers</li>
                 </ul>
               </div>
               <div>
-                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Ultra-Human Patterns</h5>
+                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Jargon Removal & Readability</h5>
                 <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
-                  <li>• Natural speech interruptions</li>
+                  <li>• Remove AI-favored words</li>
+                  <li>• Optimize Flesch scores (60-70)</li>
+                  <li>• Replace business jargon</li>
+                  <li>• Natural language alternatives</li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Emotional & Personal Touch</h5>
+                <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
+                  <li>• Sensory details & feelings</li>
                   <li>• Personal anecdotes & stories</li>
-                  <li>• Self-corrections & restarts</li>
-                  <li>• Conversational flow markers</li>
-                </ul>
-              </div>
-              <div>
-                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Export Options</h5>
-                <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
-                  <li>• TXT: Simple text format</li>
-                  <li>• PDF: Professional document</li>
-                  <li>• DOCX: Word-compatible</li>
-                  <li>• Timestamped filenames</li>
+                  <li>• Real-life examples</li>
+                  <li>• Emotional resonance markers</li>
                 </ul>
               </div>
             </div>
             <div className="mt-3 p-2 bg-green-100 dark:bg-green-800/30 rounded text-xs text-green-700 dark:text-green-300">
-              <strong>Success Rate:</strong> Ultra-aggressive humanization designed to pass ALL major AI detectors (GPTZero, Turnitin, Originality, Copyleaks) as 100% human-written content.
+              <strong>Research-Based Success:</strong> Built on proven AI text detection research including perplexity, burstiness, Flesch scores, and jargon removal for maximum detector bypass.
             </div>
           </div>
         </CardContent>

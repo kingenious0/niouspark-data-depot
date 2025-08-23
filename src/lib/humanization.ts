@@ -518,12 +518,155 @@ export function deepCleanText(rawText: string): string {
 }
 
 /**
+ * Enhanced AI jargon removal based on research insights
+ * Replaces AI-favored words with natural alternatives for better humanization
+ */
+export function removeAIJargon(text: string): string {
+  let result = text;
+
+  // Business jargon replacements
+  const jargonMap: Record<string, string[]> = {
+    'leverage': ['use', 'take advantage of', 'make the most of'],
+    'facilitate': ['help', 'make easier', 'support'],
+    'strategic initiative': ['project', 'plan', 'goal'],
+    'stakeholders': ['people involved', 'team members', 'everyone affected'],
+    'methodology': ['method', 'approach', 'way of doing things'],
+    'optimize': ['improve', 'make better', 'enhance'],
+    'proprietary': ['special', 'unique', 'our own'],
+    'ROI': ['return on investment', 'results', 'benefits'],
+    'customer acquisition': ['getting customers', 'finding clients', 'building your audience'],
+    'aforementioned': ['mentioned above', 'what I said before', 'this'],
+    'necessitates': ['needs', 'requires', 'calls for'],
+    'utilize': ['use', 'take advantage of', 'work with'],
+    'furthermore': ['plus', 'also', 'what\'s more'],
+    'however': ['but', 'though', 'on the other hand'],
+    'therefore': ['so', 'that means', 'as a result'],
+    'subsequently': ['then', 'after that', 'next'],
+    'consequently': ['so', 'because of this', 'as a result'],
+    'nevertheless': ['still', 'even so', 'but'],
+    'moreover': ['plus', 'also', 'what\'s more'],
+    'thus': ['so', 'this means', 'therefore']
+  };
+
+  // Replace jargon with natural alternatives
+  Object.entries(jargonMap).forEach(([jargon, alternatives]) => {
+    const regex = new RegExp(`\\b${jargon}\\b`, 'gi');
+    result = result.replace(regex, () => {
+      return alternatives[Math.floor(Math.random() * alternatives.length)];
+    });
+  });
+
+  // Remove passive voice constructions
+  result = result.replace(/\b(is|are|was|were)\s+(being\s+)?(done|performed|conducted|executed|implemented)\b/gi, 
+    (match, verb, being, action) => {
+      const activeAlternatives = ['doing', 'performing', 'conducting', 'executing', 'implementing'];
+      return activeAlternatives[Math.floor(Math.random() * activeAlternatives.length)];
+    }
+  );
+
+  return result;
+}
+
+/**
+ * Calculate Flesch Reading Ease score (0-100, higher = easier to read)
+ * Target range: 60-70 for optimal humanization
+ */
+export function calculateFleschScore(text: string): number {
+  const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  const words = text.split(/\s+/).filter(w => w.length > 0);
+  const syllables = countSyllables(text);
+
+  if (sentences.length === 0 || words.length === 0) return 0;
+
+  const avgSentenceLength = words.length / sentences.length;
+  const avgSyllablesPerWord = syllables / words.length;
+
+  // Flesch Reading Ease formula
+  const score = 206.835 - (1.015 * avgSentenceLength) - (84.6 * avgSyllablesPerWord);
+  
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+/**
+ * Count syllables in text (approximate)
+ */
+function countSyllables(text: string): number {
+  const words = text.toLowerCase().split(/\s+/);
+  let syllableCount = 0;
+
+  words.forEach(word => {
+    // Remove non-alphabetic characters
+    const cleanWord = word.replace(/[^a-z]/g, '');
+    
+    if (cleanWord.length <= 3) {
+      syllableCount += 1;
+    } else {
+      // Count vowel groups (approximate syllable count)
+      const vowelGroups = cleanWord.match(/[aeiouy]+/g) || [];
+      syllableCount += vowelGroups.length;
+      
+      // Adjust for silent 'e' at end
+      if (cleanWord.endsWith('e') && cleanWord.length > 3) {
+        syllableCount -= 1;
+      }
+      
+      // Ensure minimum of 1 syllable
+      syllableCount = Math.max(1, syllableCount);
+    }
+  });
+
+  return syllableCount;
+}
+
+/**
+ * Optimize text for target Flesch score (60-70 range)
+ */
+export function optimizeReadability(text: string, targetScore: number = 65): string {
+  let result = text;
+  let currentScore = calculateFleschScore(result);
+  
+  // If score is too low (too complex), simplify
+  if (currentScore < targetScore - 10) {
+    // Break down long sentences
+    result = result.replace(/([.!?])\s+([A-Z][^.!?]{50,})/g, '$1 $2');
+    
+    // Replace complex words with simpler alternatives
+    const complexWords: Record<string, string> = {
+      'comprehensive': 'complete',
+      'implementation': 'putting into action',
+      'optimization': 'improvement',
+      'methodology': 'method',
+      'facilitate': 'help',
+      'utilize': 'use',
+      'subsequently': 'then',
+      'consequently': 'so'
+    };
+    
+    Object.entries(complexWords).forEach(([complex, simple]) => {
+      const regex = new RegExp(`\\b${complex}\\b`, 'gi');
+      result = result.replace(regex, simple);
+    });
+  }
+  
+  // If score is too high (too simple), add some complexity
+  else if (currentScore > targetScore + 10) {
+    // Combine some short sentences
+    result = result.replace(/([.!?])\s+([A-Z][^.!?]{10,20})/g, '$1 $2');
+  }
+  
+  return result;
+}
+
+/**
  * Ultra-aggressive humanization for maximum AI detector resistance
  * Uses advanced techniques to create completely undetectable human writing
  */
 export function ultraHumanizeText(inputText: string, persona: HumanizationPersona = 'blogger'): string {
   // First, deep clean the text
   let text = deepCleanText(inputText);
+
+  // Remove AI jargon and business speak
+  text = removeAIJargon(text);
 
   // Apply maximum intensity humanization
   text = addSubtleImperfections(text, 'aggressive');
@@ -534,6 +677,9 @@ export function ultraHumanizeText(inputText: string, persona: HumanizationPerson
 
   // Add ultra-human touches
   text = addUltraHumanTouches(text, persona);
+
+  // Optimize readability for target Flesch score (60-70)
+  text = optimizeReadability(text, 65);
 
   return text.trim();
 }
@@ -596,9 +742,10 @@ function addUltraHumanTouches(text: string, persona: HumanizationPersona): strin
   return result;
 }
 
+
+
 /**
- * Add ultra-aggressive touches for maximum detector resistance
- * This function adds even more human-like patterns that are extremely hard to detect
+ * Enhanced ultra-human touches with emotional resonance and real-life examples
  */
 export function addUltraAggressiveTouches(text: string, persona: HumanizationPersona): string {
   let result = text;
@@ -626,11 +773,11 @@ export function addUltraAggressiveTouches(text: string, persona: HumanizationPer
       const insertIndex = Math.floor(Math.random() * (sentences.length - 1)) + 1;
       const pattern = aggressivePatterns[Math.floor(Math.random() * aggressivePatterns.length)];
       sentences[insertIndex] = `${pattern}, ${sentences[insertIndex]}`;
+      result = sentences.join('. ') + '.';
     }
-    result = sentences.join('. ') + '.';
   }
 
-  // Add more personal touches
+  // Add more personal touches with emotional resonance
   const personalTouches = [
     'This reminds me of something my friend told me once...',
     'I was actually thinking about this the other day when...',
@@ -668,11 +815,24 @@ export function addUltraAggressiveTouches(text: string, persona: HumanizationPer
     result = words.join(' ');
   }
 
+  // Add sensory details for emotional resonance
+  if (Math.random() < 0.3) {
+    const sensoryDetails = [
+      'It\'s like that feeling you get when...',
+      'You know that moment when...',
+      'It reminds me of the way...',
+      'I can almost picture...',
+      'It\'s similar to when you...'
+    ];
+    const detail = sensoryDetails[Math.floor(Math.random() * sensoryDetails.length)];
+    result = `${detail} ${result}`;
+  }
+
   return result;
 }
 
 /**
- * Analyzes text characteristics to determine human-likeness score
+ * Enhanced human-likeness analysis with research-based metrics
  */
 export function analyzeHumanLikeness(text: string): {
   score: number;
@@ -681,6 +841,16 @@ export function analyzeHumanLikeness(text: string): {
     contractionUsage: number;
     conversationalElements: number;
     naturalFlow: number;
+    perplexity: number;
+    burstiness: number;
+    readability: number;
+    jargonFree: number;
+  };
+  insights: {
+    aiJargonCount: number;
+    passiveVoiceCount: number;
+    emotionalResonance: number;
+    personalTouch: number;
   };
 } {
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -704,20 +874,67 @@ export function analyzeHumanLikeness(text: string): {
   const naturalFlowPattern = /(well|though|plus|also|so)/gi;
   const naturalFlow = Math.min((text.match(naturalFlowPattern) || []).length / sentences.length, 1);
   
+  // Calculate perplexity (unpredictability)
+  const words = text.toLowerCase().split(/\s+/);
+  const wordPairs = [];
+  for (let i = 0; i < words.length - 1; i++) {
+    wordPairs.push(`${words[i]} ${words[i + 1]}`);
+  }
+  const uniquePairs = new Set(wordPairs).size;
+  const perplexity = Math.min(uniquePairs / wordPairs.length, 1);
+  
+  // Calculate burstiness (sentence length variation)
+  const burstiness = Math.min(sentenceVariation, 1);
+  
+  // Calculate readability score
+  const fleschScore = calculateFleschScore(text);
+  const readability = Math.max(0, Math.min(1, (fleschScore - 30) / 70)); // Normalize 30-100 to 0-1
+  
+  // Check jargon-free content
+  const jargonWords = ['leverage', 'facilitate', 'methodology', 'optimize', 'proprietary', 'utilize', 'furthermore', 'therefore', 'subsequently', 'consequently'];
+  const jargonCount = jargonWords.reduce((count, jargon) => {
+    const regex = new RegExp(`\\b${jargon}\\b`, 'gi');
+    return count + (text.match(regex) || []).length;
+  }, 0);
+  const jargonFree = Math.max(0, 1 - (jargonCount / sentences.length));
+  
+  // Calculate insights
+  const aiJargonCount = jargonCount;
+  const passiveVoiceCount = (text.match(/\b(is|are|was|were)\s+(being\s+)?(done|performed|conducted|executed|implemented)\b/gi) || []).length;
+  const emotionalResonance = (text.match(/(feeling|moment|picture|reminds|similar|like that)/gi) || []).length / sentences.length;
+  const personalTouch = (text.match(/(I remember|I was thinking|It reminds me|my friend|I had this conversation)/gi) || []).length / sentences.length;
+  
   const factors = {
     sentenceVariation: Math.round(sentenceVariation * 100) / 100,
     contractionUsage: Math.round(contractionUsage * 100) / 100,
     conversationalElements: Math.round(conversationalElements * 100) / 100,
-    naturalFlow: Math.round(naturalFlow * 100) / 100
+    naturalFlow: Math.round(naturalFlow * 100) / 100,
+    perplexity: Math.round(perplexity * 100) / 100,
+    burstiness: Math.round(burstiness * 100) / 100,
+    readability: Math.round(readability * 100) / 100,
+    jargonFree: Math.round(jargonFree * 100) / 100
   };
   
-  // Calculate overall score (weighted average)
+  // Calculate overall score (weighted average with new factors)
   const score = Math.round(
-    (sentenceVariation * 0.3 + 
-     contractionUsage * 0.25 + 
-     conversationalElements * 0.25 + 
-     naturalFlow * 0.2) * 100
+    (sentenceVariation * 0.15 + 
+     contractionUsage * 0.15 + 
+     conversationalElements * 0.15 + 
+     naturalFlow * 0.10 +
+     perplexity * 0.15 +
+     burstiness * 0.10 +
+     readability * 0.10 +
+     jargonFree * 0.10) * 100
   ) / 100;
   
-  return { score: Math.min(score, 1), factors };
+  return { 
+    score: Math.min(score, 1), 
+    factors,
+    insights: {
+      aiJargonCount,
+      passiveVoiceCount,
+      emotionalResonance: Math.round(emotionalResonance * 100) / 100,
+      personalTouch: Math.round(personalTouch * 100) / 100
+    }
+  };
 }
