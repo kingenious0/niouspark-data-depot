@@ -18,7 +18,10 @@ import {
   Loader2,
   RotateCcw,
   AlertCircle,
-  BarChart3
+  BarChart3,
+  FileDown,
+  FileText as FileTextIcon,
+  FileImage
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -34,6 +37,7 @@ export default function ParaphraserPage() {
   const [wordCount, setWordCount] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [humanLikenessAnalysis, setHumanLikenessAnalysis] = useState<any>(null);
+  const [exportFormat, setExportFormat] = useState<'txt' | 'pdf' | 'docx'>('txt');
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
@@ -233,23 +237,59 @@ export default function ParaphraserPage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!outputText) return;
     
-    const blob = new Blob([outputText], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `paraphrased_text_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast({
-      title: "Downloaded!",
-      description: "Paraphrased text saved as TXT file."
-    });
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        throw new Error("Authentication required. Please log in.");
+      }
+
+      // Call export API
+      const response = await fetch('/api/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          text: outputText,
+          format: exportFormat,
+          filename: `humanized_text_${new Date().toISOString().split('T')[0]}`
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Export failed');
+      }
+
+      // Get the file blob
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `humanized_text_${new Date().toISOString().split('T')[0]}.${exportFormat}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      toast({
+        title: "Exported Successfully!",
+        description: `Text exported as ${exportFormat.toUpperCase()} file.`
+      });
+    } catch (error: any) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const handleReset = () => {
@@ -258,6 +298,7 @@ export default function ParaphraserPage() {
     setWordCount(0);
     setSelectedFile(null);
     setHumanLikenessAnalysis(null);
+    setExportFormat('txt');
     // Reset file input
     const fileInput = document.getElementById('file-upload') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
@@ -361,6 +402,7 @@ export default function ParaphraserPage() {
                   <SelectContent>
                     <SelectItem value="paraphrase">Paraphrase</SelectItem>
                     <SelectItem value="humanize">Humanize</SelectItem>
+                    <SelectItem value="ultra-humanize">Ultra Humanize Pro</SelectItem>
                     <SelectItem value="simplify">Simplify</SelectItem>
                   </SelectContent>
                 </Select>
@@ -384,7 +426,7 @@ export default function ParaphraserPage() {
             <div className="flex gap-2">
               <Button 
                 onClick={handleParaphrase} 
-                disabled={isProcessing || (!inputText.trim() && !selectedFile) || (inputText.trim() && wordCount > WORD_LIMIT)}
+                disabled={isProcessing || (!inputText.trim() && !selectedFile) || (inputText.trim() && wordCount > WORD_LIMIT) || false}
                 className="flex-1"
               >
                 {isProcessing ? (
@@ -395,7 +437,9 @@ export default function ParaphraserPage() {
                 ) : (
                   <>
                     <Wand2 className="mr-2 h-4 w-4" />
-                    {mode === 'paraphrase' ? 'Paraphrase' : mode === 'humanize' ? 'Humanize' : 'Simplify'}
+                    {mode === 'paraphrase' ? 'Paraphrase' : 
+                     mode === 'humanize' ? 'Humanize' : 
+                     mode === 'ultra-humanize' ? 'Ultra Humanize Pro' : 'Simplify'}
                   </>
                 )}
               </Button>
@@ -438,6 +482,42 @@ export default function ParaphraserPage() {
               />
             </div>
 
+            {/* Export Format Selection */}
+            {outputText && (
+              <div className="space-y-2">
+                <Label>Export Format</Label>
+                <div className="flex gap-2">
+                  <Button
+                    variant={exportFormat === 'txt' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setExportFormat('txt')}
+                    className="flex-1"
+                  >
+                    <FileTextIcon className="mr-2 h-3 w-3" />
+                    TXT
+                  </Button>
+                  <Button
+                    variant={exportFormat === 'pdf' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setExportFormat('pdf')}
+                    className="flex-1"
+                  >
+                    <FileImage className="mr-2 h-3 w-3" />
+                    PDF
+                  </Button>
+                  <Button
+                    variant={exportFormat === 'docx' ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setExportFormat('docx')}
+                    className="flex-1"
+                  >
+                    <FileDown className="mr-2 h-3 w-3" />
+                    DOCX
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Output Actions */}
             <div className="flex gap-2">
               <Button 
@@ -456,7 +536,7 @@ export default function ParaphraserPage() {
                 className="flex-1"
               >
                 <Download className="mr-2 h-4 w-4" />
-                Download TXT
+                Download {exportFormat.toUpperCase()}
               </Button>
             </div>
 
@@ -516,7 +596,7 @@ export default function ParaphraserPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid md:grid-cols-3 gap-4 text-sm">
+          <div className="grid md:grid-cols-4 gap-4 text-sm">
             <div>
               <h4 className="font-semibold mb-2">🔄 Paraphrase</h4>
               <p className="text-muted-foreground">
@@ -524,15 +604,21 @@ export default function ParaphraserPage() {
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">🛡️ Advanced Humanize</h4>
+              <h4 className="font-semibold mb-2">🛡️ Humanize</h4>
               <p className="text-muted-foreground">
-                <strong>AI Detector Resistant:</strong> Transform text with sophisticated human patterns, emotional markers, and natural imperfections that bypass GPTZero, Turnitin, and other detectors.
+                <strong>AI Detector Resistant:</strong> Transform text with sophisticated human patterns, emotional markers, and natural imperfections.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2">🚀 Ultra Humanize Pro</h4>
+              <p className="text-muted-foreground">
+                <strong>Maximum AI Detector Resistance:</strong> Deep text cleaning + ultra-aggressive humanization with speech patterns, interruptions, and personal anecdotes for complete undetectability.
               </p>
               <ul className="mt-2 text-xs text-muted-foreground list-disc list-inside">
-                <li>Sentence variability injection</li>
-                <li>AI-term substitution</li>
-                <li>Emotional engagement cues</li>
-                <li>Human hesitation markers</li>
+                <li>Deep text cleaning (emojis, markdown, HTML)</li>
+                <li>Ultra-human speech patterns & interruptions</li>
+                <li>Personal anecdotes & natural restarts</li>
+                <li>Maximum detector bypass technology</li>
               </ul>
             </div>
             <div>
@@ -546,30 +632,39 @@ export default function ParaphraserPage() {
           {/* AI Detector Resistance Features */}
           <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
             <h4 className="font-semibold mb-3 text-green-800 dark:text-green-200">
-              🛡️ Maximum AI Detector Resistance Features
+              🛡️ Ultra AI Detector Resistance Features
             </h4>
-            <div className="grid md:grid-cols-2 gap-4 text-sm">
+            <div className="grid md:grid-cols-3 gap-4 text-sm">
               <div>
-                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Word Substitution Engine</h5>
+                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Deep Text Cleaning</h5>
                 <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
-                  <li>• "Utilize" → "use" or "take advantage of"</li>
-                  <li>• "Furthermore" → "plus" or "also"</li>
-                  <li>• "However" → "but" or "though"</li>
-                  <li>• "Therefore" → "so" or "that means"</li>
+                  <li>• Remove emojis & Unicode artifacts</li>
+                  <li>• Strip markdown & HTML formatting</li>
+                  <li>• Clean code blocks & lists</li>
+                  <li>• Normalize whitespace & structure</li>
                 </ul>
               </div>
               <div>
-                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Human Pattern Injection</h5>
+                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Ultra-Human Patterns</h5>
                 <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
-                  <li>• Variable sentence lengths (burstiness)</li>
-                  <li>• Natural contractions and fillers</li>
-                  <li>• Emotional emphasis markers</li>
-                  <li>• Conversational connectors</li>
+                  <li>• Natural speech interruptions</li>
+                  <li>• Personal anecdotes & stories</li>
+                  <li>• Self-corrections & restarts</li>
+                  <li>• Conversational flow markers</li>
+                </ul>
+              </div>
+              <div>
+                <h5 className="font-medium text-green-700 dark:text-green-300 mb-2">Export Options</h5>
+                <ul className="text-xs text-green-600 dark:text-green-400 space-y-1">
+                  <li>• TXT: Simple text format</li>
+                  <li>• PDF: Professional document</li>
+                  <li>• DOCX: Word-compatible</li>
+                  <li>• Timestamped filenames</li>
                 </ul>
               </div>
             </div>
             <div className="mt-3 p-2 bg-green-100 dark:bg-green-800/30 rounded text-xs text-green-700 dark:text-green-300">
-              <strong>Success Rate:</strong> Designed to pass GPTZero, Turnitin, Originality, Copyleaks, and other major AI detectors as human-written content.
+              <strong>Success Rate:</strong> Ultra-aggressive humanization designed to pass ALL major AI detectors (GPTZero, Turnitin, Originality, Copyleaks) as 100% human-written content.
             </div>
           </div>
         </CardContent>

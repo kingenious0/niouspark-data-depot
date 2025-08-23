@@ -1,6 +1,6 @@
 import { ai } from '@/ai/genkit';
 import { WORD_LIMIT, type Tone, type Mode, type HumanizationPersona, HUMANIZATION_PERSONAS } from '@/lib/constants';
-import { humanizeText, advancedHumanizeText, analyzeHumanLikeness } from '@/lib/humanization';
+import { humanizeText, advancedHumanizeText, ultraHumanizeText, analyzeHumanLikeness, addUltraAggressiveTouches } from '@/lib/humanization';
 
 export interface ParaphraseRequest {
   text: string;
@@ -14,6 +14,7 @@ export interface ParaphraseResponse {
   paraphrasedText?: string;
   wordCount: number;
   error?: string;
+  humanLikenessAnalysis?: any;
 }
 
 /**
@@ -198,15 +199,27 @@ export async function paraphraseText(request: ParaphraseRequest): Promise<Paraph
 
     // Apply advanced humanization for maximum AI detector resistance
     if (mode === 'humanize') {
-      console.log(`Applying advanced humanization with ${tone} tone and aggressive intensity for maximum AI detector resistance`);
-      paraphrasedText = advancedHumanizeText(paraphrasedText, {
-        persona: getPersonaForTone(tone),
-        intensity: 'aggressive' // Maximum humanization for detector resistance
-      });
+      console.log(`Applying ULTRA humanization with ${tone} tone for maximum AI detector resistance`);
+      paraphrasedText = ultraHumanizeText(paraphrasedText, getPersonaForTone(tone));
 
-      // Analyze human-likeness after advanced processing
+      // Analyze human-likeness after ultra processing
       const humanLikeness = analyzeHumanLikeness(paraphrasedText);
       console.log(`Human-likeness analysis: Score ${humanLikeness.score}, Factors:`, humanLikeness.factors);
+    }
+
+    // Apply ULTRA-AGGRESSIVE humanization for maximum detector resistance
+    if (mode === 'ultra-humanize') {
+      console.log(`Applying ULTRA-AGGRESSIVE humanization with ${tone} tone for MAXIMUM AI detector resistance`);
+      
+      // First apply ultra humanization
+      paraphrasedText = ultraHumanizeText(paraphrasedText, getPersonaForTone(tone));
+      
+      // Then apply additional aggressive techniques
+      paraphrasedText = addUltraAggressiveTouches(paraphrasedText, getPersonaForTone(tone));
+
+      // Analyze human-likeness after ultra-aggressive processing
+      const humanLikeness = analyzeHumanLikeness(paraphrasedText);
+      console.log(`ULTRA-AGGRESSIVE human-likeness analysis: Score ${humanLikeness.score}, Factors:`, humanLikeness.factors);
     }
 
     console.log(`Paraphrasing completed. Original: ${wordCount} words, Output: ${countWords(paraphrasedText)} words`);

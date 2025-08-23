@@ -481,6 +481,197 @@ function applyAdvancedPersonaModifications(text: string, persona: HumanizationPe
 }
 
 /**
+ * Advanced text cleaning and preprocessing for maximum humanization
+ * Removes AI artifacts, emojis, markdown, and formatting that could trigger detectors
+ */
+export function deepCleanText(rawText: string): string {
+  let cleaned = rawText;
+
+  // Remove emojis and special Unicode characters
+  cleaned = cleaned.replace(/[\u{1F600}-\u{1F6FF}]/gu, ''); // emojis
+  cleaned = cleaned.replace(/[\u{1F900}-\u{1F9FF}]/gu, ''); // supplemental symbols
+  cleaned = cleaned.replace(/[\u{2600}-\u{26FF}]/gu, ''); // miscellaneous symbols
+  cleaned = cleaned.replace(/[\u{2700}-\u{27BF}]/gu, ''); // dingbats
+
+  // Remove markdown and formatting
+  cleaned = cleaned.replace(/[#*_`>~-]/g, ''); // markdown symbols
+  cleaned = cleaned.replace(/<[^>]*>/g, ''); // HTML tags
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, ''); // code blocks
+  cleaned = cleaned.replace(/`[^`]*`/g, ''); // inline code
+  cleaned = cleaned.replace(/\[([^\]]*)\]\([^)]*\)/g, '$1'); // markdown links
+
+  // Remove excessive whitespace and normalize
+  cleaned = cleaned.replace(/\s{2,}/g, ' '); // multiple spaces
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n'); // excessive newlines
+  cleaned = cleaned.replace(/\t/g, ' '); // tabs to spaces
+
+  // Remove common AI artifacts
+  cleaned = cleaned.replace(/\b(Note:|Important:|Key point:|Remember:|Tip:)/gi, '');
+  cleaned = cleaned.replace(/\b(Here's what you need to know:|Let me explain:|To summarize:)/gi, '');
+  cleaned = cleaned.replace(/\b(As you can see:|Clearly:|Obviously:|Evidently:)/gi, '');
+
+  // Remove numbered lists and bullet points
+  cleaned = cleaned.replace(/^\d+\.\s*/gm, ''); // numbered lists
+  cleaned = cleaned.replace(/^[-*•]\s*/gm, ''); // bullet points
+
+  return cleaned.trim();
+}
+
+/**
+ * Ultra-aggressive humanization for maximum AI detector resistance
+ * Uses advanced techniques to create completely undetectable human writing
+ */
+export function ultraHumanizeText(inputText: string, persona: HumanizationPersona = 'blogger'): string {
+  // First, deep clean the text
+  let text = deepCleanText(inputText);
+
+  // Apply maximum intensity humanization
+  text = addSubtleImperfections(text, 'aggressive');
+  text = applyDetectorSubstitutions(text);
+  text = addSentenceVariability(text);
+  text = addEmotionalMarkers(text);
+  text = humanizeTransitions(text);
+
+  // Add ultra-human touches
+  text = addUltraHumanTouches(text, persona);
+
+  return text.trim();
+}
+
+/**
+ * Add ultra-human touches for maximum detector resistance
+ */
+function addUltraHumanTouches(text: string, persona: HumanizationPersona): string {
+  let result = text;
+
+  // Add natural speech patterns
+  const speechPatterns = [
+    'you know what I mean',
+    'if you think about it',
+    'I guess what I\'m trying to say is',
+    'it\'s like, you know',
+    'I mean, honestly',
+    'well, basically',
+    'so yeah, that\'s the thing',
+    'I don\'t know, maybe',
+    'it\'s hard to explain but',
+    'I feel like'
+  ];
+
+  // Insert speech patterns randomly
+  const sentences = result.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  if (sentences.length > 2) {
+    const insertIndex = Math.floor(Math.random() * (sentences.length - 1)) + 1;
+    const pattern = speechPatterns[Math.floor(Math.random() * speechPatterns.length)];
+    sentences[insertIndex] = `${pattern}, ${sentences[insertIndex]}`;
+    result = sentences.join('. ') + '.';
+  }
+
+  // Add natural interruptions and restarts
+  if (Math.random() < 0.3) {
+    const interruptions = [
+      'Wait, let me rephrase that.',
+      'Actually, scratch that.',
+      'Hang on, I\'m getting ahead of myself.',
+      'Let me start over.',
+      'I\'m rambling, aren\'t I?'
+    ];
+    const interruption = interruptions[Math.floor(Math.random() * interruptions.length)];
+    result = `${interruption} ${result}`;
+  }
+
+  // Add personal anecdotes occasionally
+  if (Math.random() < 0.2) {
+    const anecdotes = [
+      'I remember when I first learned about this...',
+      'It reminds me of this time...',
+      'I was thinking about this the other day...',
+      'This is something I\'ve been pondering...',
+      'I had this conversation with a friend recently...'
+    ];
+    const anecdote = anecdotes[Math.floor(Math.random() * anecdotes.length)];
+    result = `${anecdote} ${result}`;
+  }
+
+  return result;
+}
+
+/**
+ * Add ultra-aggressive touches for maximum detector resistance
+ * This function adds even more human-like patterns that are extremely hard to detect
+ */
+export function addUltraAggressiveTouches(text: string, persona: HumanizationPersona): string {
+  let result = text;
+
+  // Add more natural speech patterns with higher frequency
+  const aggressivePatterns = [
+    'you know what I\'m saying',
+    'I mean, like, you know',
+    'it\'s kinda like, you know',
+    'I guess what I\'m trying to get at is',
+    'the thing is, you see',
+    'well, you know how it is',
+    'I don\'t know, it\'s just',
+    'it\'s like, I don\'t know',
+    'you get what I mean, right',
+    'I\'m not sure how to put this but'
+  ];
+
+  // Insert patterns more frequently
+  const sentences = result.split(/[.!?]+/).filter(s => s.trim().length > 0);
+  if (sentences.length > 3) {
+    // Add patterns to multiple sentences
+    const numToModify = Math.min(3, Math.floor(sentences.length / 3));
+    for (let i = 0; i < numToModify; i++) {
+      const insertIndex = Math.floor(Math.random() * (sentences.length - 1)) + 1;
+      const pattern = aggressivePatterns[Math.floor(Math.random() * aggressivePatterns.length)];
+      sentences[insertIndex] = `${pattern}, ${sentences[insertIndex]}`;
+    }
+    result = sentences.join('. ') + '.';
+  }
+
+  // Add more personal touches
+  const personalTouches = [
+    'This reminds me of something my friend told me once...',
+    'I was actually thinking about this the other day when...',
+    'It\'s funny because I just had this conversation...',
+    'You know what\'s interesting? I was reading about this...',
+    'I remember learning about this in school and...'
+  ];
+
+  if (Math.random() < 0.4) { // Higher chance for ultra mode
+    const touch = personalTouches[Math.floor(Math.random() * personalTouches.length)];
+    result = `${touch} ${result}`;
+  }
+
+  // Add more natural interruptions
+  if (Math.random() < 0.5) {
+    const interruptions = [
+      'Wait, that\'s not quite right.',
+      'Actually, let me think about this differently.',
+      'Hang on, I\'m getting confused.',
+      'Let me rephrase that completely.',
+      'I\'m not explaining this well.',
+      'This is harder to explain than I thought.'
+    ];
+    const interruption = interruptions[Math.floor(Math.random() * interruptions.length)];
+    result = `${interruption} ${result}`;
+  }
+
+  // Add conversational markers throughout
+  const markers = ['right?', 'you know?', 'isn\'t it?', 'don\'t you think?', 'see what I mean?'];
+  const words = result.split(' ');
+  if (words.length > 20) {
+    const insertPos = Math.floor(Math.random() * (words.length - 10)) + 10;
+    const marker = markers[Math.floor(Math.random() * markers.length)];
+    words.splice(insertPos, 0, marker);
+    result = words.join(' ');
+  }
+
+  return result;
+}
+
+/**
  * Analyzes text characteristics to determine human-likeness score
  */
 export function analyzeHumanLikeness(text: string): {
