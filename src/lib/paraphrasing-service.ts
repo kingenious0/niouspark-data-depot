@@ -1,6 +1,7 @@
 import { ai } from '@/ai/genkit';
 import { WORD_LIMIT, type Tone, type Mode, type HumanizationPersona, HUMANIZATION_PERSONAS } from '@/lib/constants';
 import { humanizeText, advancedHumanizeText, ultraHumanizeText, analyzeHumanLikeness, addUltraAggressiveTouches } from '@/lib/humanization';
+import { WEPEnhancedHumanization } from '@/lib/wep-enhanced-humanization';
 
 export interface ParaphraseRequest {
   text: string;
@@ -202,6 +203,24 @@ export async function paraphraseText(request: ParaphraseRequest): Promise<Paraph
       console.log(`Applying ULTRA humanization with ${tone} tone for maximum AI detector resistance`);
       paraphrasedText = ultraHumanizeText(paraphrasedText, getPersonaForTone(tone));
 
+      // Apply WEP-enhanced humanization for authentic human patterns
+      try {
+        const wepHumanizer = new WEPEnhancedHumanization();
+        await wepHumanizer.initialize();
+        
+        paraphrasedText = await wepHumanizer.humanizeWithWEPPatterns(paraphrasedText, {
+          useWEPPatterns: true,
+          patternIntensity: 'aggressive',
+          maintainOriginalMeaning: true,
+          addPersonalTouch: true,
+          emotionalResonance: true
+        });
+        
+        console.log('🎯 Applied WEP dataset patterns for authentic human writing');
+      } catch (error) {
+        console.warn('⚠️ WEP enhancement failed, continuing with standard humanization:', error);
+      }
+
       // Analyze human-likeness after ultra processing
       const humanLikeness = analyzeHumanLikeness(paraphrasedText);
       console.log(`Human-likeness analysis: Score ${humanLikeness.score}, Factors:`, humanLikeness.factors);
@@ -217,9 +236,58 @@ export async function paraphraseText(request: ParaphraseRequest): Promise<Paraph
       // Then apply additional aggressive techniques
       paraphrasedText = addUltraAggressiveTouches(paraphrasedText, getPersonaForTone(tone));
 
+      // Apply WEP-enhanced humanization with maximum intensity for authentic human patterns
+      try {
+        const wepHumanizer = new WEPEnhancedHumanization();
+        await wepHumanizer.initialize();
+        
+        paraphrasedText = await wepHumanizer.humanizeWithWEPPatterns(paraphrasedText, {
+          useWEPPatterns: true,
+          patternIntensity: 'aggressive',
+          maintainOriginalMeaning: true,
+          addPersonalTouch: true,
+          emotionalResonance: true
+        });
+        
+        console.log('🎯 Applied WEP dataset patterns with MAXIMUM intensity for authentic human writing');
+      } catch (error) {
+        console.warn('⚠️ WEP enhancement failed, continuing with standard ultra-aggressive humanization:', error);
+      }
+
       // Analyze human-likeness after ultra-aggressive processing
       const humanLikeness = analyzeHumanLikeness(paraphrasedText);
       console.log(`ULTRA-AGGRESSIVE human-likeness analysis: Score ${humanLikeness.score}, Factors:`, humanLikeness.factors);
+    }
+
+    // Apply WEP-ENHANCED humanization using authentic human writing patterns
+    if (mode === 'wep-humanize') {
+      console.log(`Applying WEP-ENHANCED humanization with ${tone} tone using authentic human writing patterns`);
+      
+      try {
+        const wepHumanizer = new WEPEnhancedHumanization();
+        await wepHumanizer.initialize();
+        
+        // Apply WEP patterns first for authentic human structure
+        paraphrasedText = await wepHumanizer.humanizeWithWEPPatterns(paraphrasedText, {
+          useWEPPatterns: true,
+          patternIntensity: 'aggressive',
+          maintainOriginalMeaning: true,
+          addPersonalTouch: true,
+          emotionalResonance: true
+        });
+        
+        // Then apply standard humanization for AI detector resistance
+        paraphrasedText = ultraHumanizeText(paraphrasedText, getPersonaForTone(tone));
+        
+        console.log('🎯 Applied WEP dataset patterns + Ultra humanization for maximum authenticity');
+      } catch (error) {
+        console.warn('⚠️ WEP enhancement failed, falling back to standard ultra humanization:', error);
+        paraphrasedText = ultraHumanizeText(paraphrasedText, getPersonaForTone(tone));
+      }
+
+      // Analyze human-likeness after WEP-enhanced processing
+      const humanLikeness = analyzeHumanLikeness(paraphrasedText);
+      console.log(`WEP-ENHANCED human-likeness analysis: Score ${humanLikeness.score}, Factors:`, humanLikeness.factors);
     }
 
     console.log(`Paraphrasing completed. Original: ${wordCount} words, Output: ${countWords(paraphrasedText)} words`);
