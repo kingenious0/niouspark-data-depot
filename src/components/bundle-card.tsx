@@ -199,17 +199,28 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
   const checkAdminStatus = async () => {
     try {
       const idToken = await auth.currentUser?.getIdToken();
+      console.log("🔍 Checking admin status for user:", user?.email);
+      
       const decodedToken = await fetch('/api/auth/verify-token', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${idToken}` }
       }).then(res => res.json());
       
+      console.log("🔍 Token verification result:", decodedToken);
+      
       if (decodedToken.success && decodedToken.data.role === 'admin') {
+        console.log("✅ User is admin, enabling Datamart purchase");
         setIsAdmin(true);
         setShowDatamartPurchase(true);
+      } else {
+        console.log("❌ User is not admin, role:", decodedToken.data?.role);
+        setIsAdmin(false);
+        setShowDatamartPurchase(false);
       }
     } catch (error) {
       console.error("Failed to check admin status:", error);
+      setIsAdmin(false);
+      setShowDatamartPurchase(false);
     }
   };
 
@@ -540,6 +551,13 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
           </div>
           
           <DialogFooter className="flex-col gap-2">
+            {/* Debug Info */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+                Debug: isAdmin={isAdmin.toString()}, showDatamartPurchase={showDatamartPurchase.toString()}
+              </div>
+            )}
+            
             {/* Admin Datamart Purchase Button */}
             {isAdmin && showDatamartPurchase && (
               <Button 
@@ -553,12 +571,14 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
               </Button>
             )}
             
-            {/* Regular Payment Button */}
-            <Button onClick={handlePrimaryActionClick} type="button" disabled={loading} className="w-full">
-              {loading && <Loader2 className="animate-spin mr-2" />}
-              <CreditCard className="mr-2 h-4 w-4" />
-              Pay with {paymentChannel === "mobile_money" ? "Mobile Money" : "Card"} (GH₵{bundle.price.toFixed(2)})
-            </Button>
+            {/* Regular Payment Button - ONLY for customers */}
+            {!isAdmin && (
+              <Button onClick={handlePrimaryActionClick} type="button" disabled={loading} className="w-full">
+                {loading && <Loader2 className="animate-spin mr-2" />}
+                <CreditCard className="mr-2 h-4 w-4" />
+                Pay with {paymentChannel === "mobile_money" ? "Mobile Money" : "Card"} (GH₵{bundle.price.toFixed(2)})
+              </Button>
+            )}
             
             <DialogClose asChild>
                 <Button variant="outline" className="w-full">Cancel</Button>
