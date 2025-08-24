@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { Loader2, UserPlus } from "lucide-react";
+import { Loader2, UserPlus, Wallet, CreditCard } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -182,13 +182,57 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
   const [newNumber, setNewNumber] = useState("+233");
   const [isAddingNumber, setIsAddingNumber] = useState(false);
 
+  // Admin wallet states
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [walletBalance, setWalletBalance] = useState(0);
+  const [loadingWallet, setLoadingWallet] = useState(false);
+  const [showWalletPurchase, setShowWalletPurchase] = useState(false);
 
   useEffect(() => {
     if (user?.email) setEmail(user.email);
     if (isOpen && user) {
         fetchSavedNumbers();
+        checkAdminStatus();
     }
   }, [user, isOpen]);
+
+  const checkAdminStatus = async () => {
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const decodedToken = await fetch('/api/auth/verify-token', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      }).then(res => res.json());
+      
+      if (decodedToken.success && decodedToken.data.role === 'admin') {
+        setIsAdmin(true);
+        fetchWalletBalance();
+      }
+    } catch (error) {
+      console.error("Failed to check admin status:", error);
+    }
+  };
+
+  const fetchWalletBalance = async () => {
+    if (!user?.uid) return;
+    
+    setLoadingWallet(true);
+    try {
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch(`/api/admin/wallet-balance?userId=${user.uid}`, {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setWalletBalance(data.data.walletBalance);
+        setShowWalletPurchase(data.data.walletBalance >= bundle.price);
+      }
+    } catch (error) {
+      console.error("Failed to fetch wallet balance:", error);
+    } finally {
+      setLoadingWallet(false);
+    }
+  };
 
   const fetchSavedNumbers = async () => {
     setLoadingNumbers(true);
@@ -259,6 +303,81 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
         handlePurchase();
     }
   }
+
+  const handleAdminWalletPurchase = async () => {
+    setLoading(true);
+    
+    if (!email) {
+      toast({
+        title: "Missing Information",
+        description: "Please enter your email.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin-wallet-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          reference: `NDD_ADMIN_${Date.now()}`,
+          email,
+          phone: paymentChannel === "mobile_money" ? phone : undefined,
+          bundleId: bundle.id,
+          bundleName: bundle.name,
+          amount: Math.round(bundle.price * 100),
+          channel: paymentChannel,
+          userId: user?.uid,
+        }),
+      });
+
+      const result = await res.json();
+      
+      if (result.success) {
+        toast({
+          title: "Purchase Successful! 🎉",
+          description: `Bundle purchased using admin wallet. New balance: GH₵${result.data.newWalletBalance}`,
+        });
+        
+        // Update local wallet balance
+        setWalletBalance(result.data.newWalletBalance);
+        setShowWalletPurchase(result.data.newWalletBalance >= bundle.price);
+        
+        onOpenChange(false);
+        
+        // Refresh the page or redirect to account page
+        setTimeout(() => {
+          window.location.href = '/account?purchase_success=true';
+        }, 2000);
+      } else {
+        if (result.error === "Insufficient wallet balance") {
+          toast({
+            title: "Insufficient Wallet Balance",
+            description: `Your wallet has GH₵${result.walletBalance}. You need GH₵${result.requiredAmount}.`,
+            variant: "destructive",
+          });
+          setShowWalletPurchase(false);
+        } else {
+          toast({
+            title: "Purchase Failed",
+            description: result.error || "Failed to complete purchase.",
+            variant: "destructive",
+          });
+        }
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Error in admin wallet purchase:", err);
+      toast({
+        title: "Server Error",
+        description: "Could not process your purchase request.",
+        variant: "destructive",
+      });
+      setLoading(false);
+    }
+  };
 
   const handlePurchase = async () => {
     setShowConfirmDialog(false);
@@ -335,6 +454,46 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
               Confirm details to complete your purchase.
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Admin Wallet Section */}
+          {isAdmin && (
+            <div className="space-y-3 p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-blue-600" />
+                <Label className="font-semibold text-blue-600">Admin Wallet</Label>
+              </div>
+              
+              {loadingWallet ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm text-muted-foreground">Loading wallet balance...</span>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Current Balance:</span>
+                    <span className="text-lg font-bold text-green-600">GH₵{walletBalance.toFixed(2)}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Bundle Price:</span>
+                    <span className="text-lg font-bold text-primary">GH₵{bundle.price.toFixed(2)}</span>
+                  </div>
+                  
+                  {showWalletPurchase ? (
+                    <div className="flex items-center gap-2 text-green-600 text-sm">
+                      <span>✓ Sufficient balance</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-red-600 text-sm">
+                      <span>✗ Insufficient balance</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
                 <Label>Payment Method</Label>
@@ -408,14 +567,31 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
               />
             </div>
           </div>
-          <DialogFooter>
-            <DialogClose asChild>
-                <Button variant="outline">Cancel</Button>
-            </DialogClose>
-            <Button onClick={handlePrimaryActionClick} type="button" disabled={loading}>
+          
+          <DialogFooter className="flex-col gap-2">
+            {/* Admin Wallet Purchase Button */}
+            {isAdmin && showWalletPurchase && (
+              <Button 
+                onClick={handleAdminWalletPurchase} 
+                disabled={loading} 
+                className="w-full bg-green-600 hover:bg-green-700"
+              >
+                {loading && <Loader2 className="animate-spin mr-2" />}
+                <Wallet className="mr-2 h-4 w-4" />
+                Pay with Wallet (GH₵{bundle.price.toFixed(2)})
+              </Button>
+            )}
+            
+            {/* Regular Payment Button */}
+            <Button onClick={handlePrimaryActionClick} type="button" disabled={loading} className="w-full">
               {loading && <Loader2 className="animate-spin mr-2" />}
-              Pay GH₵{bundle.price.toFixed(2)}
+              <CreditCard className="mr-2 h-4 w-4" />
+              Pay with {paymentChannel === "mobile_money" ? "Mobile Money" : "Card"} (GH₵{bundle.price.toFixed(2)})
             </Button>
+            
+            <DialogClose asChild>
+                <Button variant="outline" className="w-full">Cancel</Button>
+            </DialogClose>
           </DialogFooter>
         </DialogContent>
       )}

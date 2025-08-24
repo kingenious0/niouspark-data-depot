@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/toaster';
 import Header from '@/components/header';
 import Footer from '@/components/footer';
 import { ThemeProvider } from '@/components/theme-provider';
+import AppLoadingWrapper from '@/components/app-loading-wrapper';
 
 export const metadata: Metadata = {
   title: 'Niouspark Data Depot',
@@ -38,9 +39,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Header />
-          <main className="flex-grow flex flex-col">{children}</main>
-          <Footer />
+          <AppLoadingWrapper>
+            <Header />
+            <main className="flex-grow flex flex-col">{children}</main>
+            <Footer />
+          </AppLoadingWrapper>
           <Toaster />
         </ThemeProvider>
       </body>
