@@ -202,6 +202,16 @@ export function EnhancedChatClient() {
     setMounted(true);
   }, []);
 
+  // Debug logging
+  useEffect(() => {
+    console.log('🎯 Enhanced Chat Client Debug:');
+    console.log('- User:', user);
+    console.log('- Auth Loading:', authLoading);
+    console.log('- Is Pending:', isPending);
+    console.log('- Voice disabled state:', isPending || !user || authLoading);
+    console.log('- Mounted:', mounted);
+  }, [user, authLoading, isPending, mounted]);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (mounted) {
@@ -311,12 +321,19 @@ export function EnhancedChatClient() {
       <div className="border-t bg-background/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto p-4 space-y-4">
           {/* Voice Chat Component */}
-          <VoiceChat
-            onTranscript={handleVoiceTranscript}
-            onStartListening={handleStartListening}
-            onStopListening={handleStopListening}
-            isDisabled={isPending || !user || authLoading}
-          />
+          <div className="voice-chat-container">
+            <VoiceChat
+              onTranscript={handleVoiceTranscript}
+              onStartListening={handleStartListening}
+              onStopListening={handleStopListening}
+              isDisabled={isPending || !user || authLoading}
+            />
+            
+            {/* Debug: Always show this indicator */}
+            <div className="text-xs text-gray-500 text-center mt-1">
+              DEBUG: Voice Chat Container Rendered - {new Date().toLocaleTimeString()}
+            </div>
+          </div>
           
           {/* Text Input Form */}
           <form ref={formRef} action={handleFormAction} className="flex items-end gap-3">

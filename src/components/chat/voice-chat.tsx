@@ -210,7 +210,7 @@ export function VoiceChat({
 
   if (!isSupported) {
     return (
-      <div className={cn("flex flex-col gap-2", className)}>
+      <div className={cn("flex flex-col gap-2 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg", className)}>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
@@ -231,6 +231,11 @@ export function VoiceChat({
         
         <div className="text-xs text-muted-foreground text-center">
           For voice features, please use Chrome, Edge, or Firefox
+        </div>
+        
+        {/* Debug info in production */}
+        <div className="text-xs text-red-600 dark:text-red-400 text-center">
+          DEBUG: Voice Chat Component Rendered (Unsupported Browser)
         </div>
       </div>
     );
@@ -389,6 +394,11 @@ export function VoiceChat({
           <Settings className="h-3 w-3" />
           <span>{supportInfo?.browser || 'Unknown'}</span>
         </div>
+      </div>
+      
+      {/* Debug info in production */}
+      <div className="text-xs text-blue-600 dark:text-blue-400 text-center">
+        DEBUG: Voice Chat Component Rendered (Browser Supported) - {new Date().toLocaleTimeString()}
       </div>
     </div>
   );
