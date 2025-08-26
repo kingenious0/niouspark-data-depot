@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { validateEnvironment } from "@/lib/env-config";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Settings } from "lucide-react";
-import { GeminiStyleChatClient } from "./gemini-style-chat-client";
+import { SimpleGeminiChat } from "./simple-gemini-chat";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function ServerChatPage() {
@@ -64,7 +64,7 @@ export default function ServerChatPage() {
   return (
     <div className="h-full">
       <ErrorBoundary>
-        <GeminiStyleChatClient />
+        <SimpleGeminiChat />
       </ErrorBoundary>
     </div>
   );

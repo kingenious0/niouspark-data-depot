@@ -1,38 +1,20 @@
 'use client';
 
 import { useActionState, useEffect, useRef, useState, startTransition } from 'react';
-import dynamic from 'next/dynamic';
 import { continueConversation, ChatState } from '@/app/chat/actions';
 import { useAuth } from '@/lib/auth';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Bot, User, Volume2, Sparkles, MessageCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Bot, User, Volume2, Sparkles, MessageCircle, Send, Loader2, Mic } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-// Dynamically import the voice input to avoid SSR issues
-const GeminiStyleInput = dynamic(
-  () => import('@/components/chat/gemini-style-input').then(mod => ({ default: mod.GeminiStyleInput })),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="w-full max-w-4xl mx-auto">
-        <div className="relative overflow-hidden bg-background border shadow-lg rounded-lg">
-          <div className="p-4">
-            <div className="min-h-[60px] bg-muted/20 rounded animate-pulse" />
-          </div>
-        </div>
-      </div>
-    )
-  }
-);
-import { triggerSpeech } from '@/components/chat/voice-chat';
 import { useToast } from '@/hooks/use-toast';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import { NiousparkLoading, InlineLoading } from '@/components/niouspark-loading';
 
 function getInitialState(): ChatState {
   return {
@@ -52,12 +34,6 @@ interface MessageProps {
 
 function Message({ message, isLatest }: MessageProps) {
   const { toast } = useToast();
-
-  const handleSpeakMessage = () => {
-    if (message.role === 'assistant') {
-      triggerSpeech(message.content);
-    }
-  };
 
   const copyCodeToClipboard = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -84,7 +60,6 @@ function Message({ message, isLatest }: MessageProps) {
         "relative group flex-1",
         message.role === 'user' ? 'ml-12' : 'mr-12'
       )}>
-        {/* Message content */}
         <div className={cn(
           "rounded-2xl p-4 shadow-sm relative",
           message.role === 'user' 
@@ -125,15 +100,6 @@ function Message({ message, isLatest }: MessageProps) {
                       </code>
                     );
                   },
-                  h1({ children }) {
-                    return <h1 className="text-xl font-bold mb-2">{children}</h1>;
-                  },
-                  h2({ children }) {
-                    return <h2 className="text-lg font-semibold mb-2">{children}</h2>;
-                  },
-                  h3({ children }) {
-                    return <h3 className="text-base font-medium mb-1">{children}</h3>;
-                  },
                 }}
               >
                 {message.content}
@@ -142,22 +108,8 @@ function Message({ message, isLatest }: MessageProps) {
           ) : (
             <p className="whitespace-pre-wrap">{message.content}</p>
           )}
-          
-          {/* Voice play button for assistant messages */}
-          {message.role === 'assistant' && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute -bottom-2 -right-2 h-6 w-6 p-0 bg-background border shadow-sm opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
-              onClick={handleSpeakMessage}
-              title="Speak this message"
-            >
-              <Volume2 className="h-3 w-3" />
-            </Button>
-          )}
         </div>
         
-        {/* Message metadata */}
         <div className={cn(
           "flex items-center gap-2 mt-2 text-xs text-muted-foreground",
           message.role === 'user' ? 'justify-end' : 'justify-start'
@@ -184,49 +136,35 @@ function Message({ message, isLatest }: MessageProps) {
   );
 }
 
-export function GeminiStyleChatClient() {
+export function SimpleGeminiChat() {
   const { user, loading: authLoading } = useAuth();
   const [state, formAction, isPending] = useActionState(continueConversation, getInitialState());
   const [mounted, setMounted] = useState(false);
+  const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
 
-  // Prevent hydration mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('🎯 Gemini Style Chat Client Debug:');
-    console.log('- User:', user);
-    console.log('- Auth Loading:', authLoading);
-    console.log('- Is Pending:', isPending);
-    console.log('- Mounted:', mounted);
-  }, [user, authLoading, isPending, mounted]);
-
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (mounted) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [state.messages, mounted]);
 
-  // Auto-speak AI responses when they arrive
+  // Auto-resize textarea
   useEffect(() => {
-    if (mounted && state.messages.length > 0) {
-      const lastMessage = state.messages[state.messages.length - 1];
-      if (lastMessage.role === 'assistant' && lastMessage.content !== getInitialState().messages[0].content) {
-        // Small delay to ensure the message is rendered
-        setTimeout(() => {
-          triggerSpeech(lastMessage.content);
-        }, 500);
-      }
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px';
     }
-  }, [state.messages, mounted]);
+  }, [message]);
 
-  const handleSubmit = (message: string) => {
-    if (!user || !message.trim()) return;
+  const handleSubmit = () => {
+    if (!message.trim() || isPending || !user) return;
     
     startTransition(() => {
       const formData = new FormData();
@@ -234,32 +172,42 @@ export function GeminiStyleChatClient() {
       formAction(formData);
     });
 
+    setMessage('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
     toast({
       title: "Message sent! 📨",
       description: `"${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`
     });
   };
 
-  const handleVoiceTranscript = (transcript: string) => {
-    toast({
-      title: "Voice input received! 🎤",
-      description: `"${transcript.substring(0, 50)}${transcript.length > 50 ? '...' : ''}"`
-    });
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   if (!mounted) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <NiousparkLoading />
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center space-y-4">
+          <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-600 flex items-center justify-center mx-auto">
+            <Sparkles className="h-4 w-4 text-white" />
+          </div>
+          <p className="text-muted-foreground">Loading NiousparkAI...</p>
+        </div>
       </div>
     );
   }
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex items-center justify-center h-screen">
         <div className="text-center space-y-4">
-          <InlineLoading />
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
           <p className="text-muted-foreground">Loading chat...</p>
         </div>
       </div>
@@ -268,29 +216,25 @@ export function GeminiStyleChatClient() {
 
   if (!user) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <Card className="max-w-md mx-auto text-center">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 justify-center">
-              <MessageCircle className="h-5 w-5" />
-              Authentication Required
-            </CardTitle>
-            <CardDescription>
-              Please log in to start chatting with NiousparkAI
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="flex items-center justify-center h-screen">
+        <Card className="max-w-md mx-auto text-center p-6">
+          <div className="space-y-4">
+            <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground" />
+            <div>
+              <h3 className="text-lg font-semibold">Authentication Required</h3>
+              <p className="text-sm text-muted-foreground">Please log in to start chatting with NiousparkAI</p>
+            </div>
             <Button onClick={() => window.location.href = '/login'}>
               Go to Login
             </Button>
-          </CardContent>
+          </div>
         </Card>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-background to-muted/20">
+    <div className="flex flex-col h-screen bg-gradient-to-b from-background to-muted/20">
       {/* Header */}
       <div className="flex-shrink-0 border-b bg-background/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto py-6 px-4">
@@ -321,7 +265,6 @@ export function GeminiStyleChatClient() {
             />
           ))}
           
-          {/* Loading indicator */}
           {isPending && (
             <div className="flex items-start gap-4 max-w-4xl mx-auto py-6">
               <Avatar className="h-8 w-8 border-2 border-primary">
@@ -331,7 +274,7 @@ export function GeminiStyleChatClient() {
               </Avatar>
               <div className="bg-muted/50 border rounded-2xl p-4">
                 <div className="flex items-center gap-2">
-                  <InlineLoading />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   <span className="text-sm text-muted-foreground">NiousparkAI is thinking...</span>
                 </div>
               </div>
@@ -358,13 +301,61 @@ export function GeminiStyleChatClient() {
       {/* Input area */}
       <div className="flex-shrink-0 border-t bg-background/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto p-4">
-          <GeminiStyleInput
-            onSubmit={handleSubmit}
-            onVoiceTranscript={handleVoiceTranscript}
-            isLoading={isPending}
-            disabled={!user || authLoading}
-            placeholder={user && !authLoading ? "Ask NiousparkAI anything..." : "Please log in to chat"}
-          />
+          <Card className="relative overflow-hidden bg-background border shadow-lg">
+            <div className="relative">
+              <Textarea
+                ref={textareaRef}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Ask NiousparkAI anything..."
+                disabled={!user || isPending}
+                className="min-h-[60px] max-h-[200px] resize-none border-0 focus:ring-0 focus:ring-offset-0 shadow-none bg-transparent text-base leading-relaxed pr-24"
+                style={{ fontSize: '16px', lineHeight: '24px' }}
+              />
+              
+              <div className="absolute right-3 bottom-3 flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 w-9 p-0 rounded-full text-muted-foreground hover:text-foreground"
+                  disabled
+                  title="Voice input (coming soon)"
+                >
+                  <Mic className="h-4 w-4" />
+                </Button>
+                
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!message.trim() || isPending || !user}
+                  size="sm"
+                  className={cn(
+                    "h-9 w-9 p-0 rounded-full transition-all duration-200",
+                    message.trim() && !isPending && user
+                      ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+                      : "bg-muted text-muted-foreground cursor-not-allowed"
+                  )}
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            
+            <div className="px-4 py-2 bg-muted/30 border-t flex items-center justify-between text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-3 w-3" />
+                <span>NiousparkAI can make mistakes. Verify important information.</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <Volume2 className="h-3 w-3" />
+                <span>Voice features loading...</span>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     </div>
