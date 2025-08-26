@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
-import { Menu, LogOut, Loader2, Cpu, Shield, MessageCircle } from "lucide-react";
+import { Menu, LogOut, Loader2, Cpu, Shield, MessageCircle, ChevronDown } from "lucide-react";
 import LogoIcon from "./logo-icon";
 import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -21,11 +21,68 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const navLinks = [
-  { href: "/", label: "Home" },
-  { href: "/bundles", label: "Bundles" },
-  { href: "/paraphraser", label: "Paraphraser" },
-  { href: "/chat", label: "AI Chat" },
+interface NavItem {
+  href: string;
+  label: string;
+  requireAuth?: boolean;
+  requireAdmin?: boolean;
+}
+
+interface NavLink {
+  href: string;
+  label: string;
+  dropdown?: NavItem[];
+  requireAdmin?: boolean;
+}
+
+const navLinks: NavLink[] = [
+  { 
+    href: "/", 
+    label: "About",
+    dropdown: [
+      { href: "/", label: "Home" },
+      { href: "/about", label: "Company Info" },
+      { href: "/contact", label: "Contact" }
+    ]
+  },
+  { 
+    href: "/chat", 
+    label: "AI Tools",
+    dropdown: [
+      { href: "/chat", label: "AI Chat (Voice + Text)" },
+      { href: "/paraphraser", label: "Paraphraser / Humaniser (Enhanced)" }
+    ]
+  },
+  { 
+    href: "/bundles", 
+    label: "Bundles",
+    dropdown: [
+      { href: "/bundles/mtn", label: "MTN Data" },
+      { href: "/bundles/airteltigo", label: "AirtelTigo" },
+      { href: "/bundles/telecel", label: "Telecel" }
+    ]
+  },
+  { 
+    href: "/account", 
+    label: "Account",
+    dropdown: [
+      { href: "/account", label: "Profile / Settings", requireAuth: true },
+      { href: "/admin/wallet", label: "DataMart Balance", requireAdmin: true },
+      { href: "/account/history", label: "Purchase History", requireAuth: true }
+    ]
+  },
+  { 
+    href: "/admin", 
+    label: "Admin",
+    dropdown: [
+      { href: "/admin", label: "Admin Dashboard" },
+      { href: "/admin/users", label: "User Management" },
+      { href: "/admin/wallet", label: "DataMart Wallet" },
+      { href: "/admin/ai", label: "Analytics" },
+      { href: "/predict", label: "AI Sales Predictor" }
+    ],
+    requireAdmin: true
+  }
 ];
 
 const Header = () => {
@@ -68,29 +125,57 @@ const Header = () => {
           <LogoIcon />
         </Link>
         <nav className="flex flex-col gap-4">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "text-lg font-medium transition-colors hover:text-primary",
-                pathname === link.href ? "text-primary" : ""
-              )}
-            >
-              {link.label}
-            </Link>
-          ))}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className={cn(
-                "text-lg font-medium transition-colors hover:text-primary",
-                pathname.startsWith("/admin") ? "text-primary" : ""
-              )}
-            >
-              Admin Dashboard
-            </Link>
-          )}
+          {navLinks.map((link) => {
+            // Hide entire Admin section for non-admin users
+            if (link.requireAdmin && !isAdmin) return null;
+
+            const isCurrentPath = pathname === link.href || 
+              (link.dropdown?.some(item => pathname === item.href));
+            
+            // Filter dropdown items based on user permissions
+            const filteredDropdown = link.dropdown?.filter(item => {
+              if (item.requireAdmin) return isAdmin;
+              if (item.requireAuth) return user;
+              return true;
+            });
+
+            return (
+              <div key={link.label} className="space-y-2">
+                <Link
+                  href={link.href}
+                  className={cn(
+                    "text-lg font-medium transition-colors hover:text-primary block",
+                    isCurrentPath ? "text-primary" : ""
+                  )}
+                >
+                  {link.label}
+                </Link>
+                {filteredDropdown && filteredDropdown.length > 0 && (
+                  <div className="ml-4 space-y-2">
+                    {filteredDropdown.map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={cn(
+                          "text-sm font-medium transition-colors hover:text-primary block",
+                          pathname === item.href ? "text-primary" : "text-muted-foreground"
+                        )}
+                      >
+                        {item.label === 'AI Chat (Voice + Text)' ? (
+                          <span className="flex items-center gap-2">
+                            <MessageCircle className="h-4 w-4" />
+                            {item.label}
+                          </span>
+                        ) : (
+                          item.label
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
         <div className="border-t pt-6 flex flex-col gap-4">
           {user ? (
@@ -122,25 +207,75 @@ const Header = () => {
         <Link href="/" className="flex items-center gap-2">
           <LogoIcon />
         </Link>
-        <nav className="hidden md:flex items-center gap-6">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                "text-sm font-medium transition-colors hover:text-primary",
-                pathname === link.href ? "text-primary" : "text-muted-foreground"
-              )}
-            >
-              {link.label === 'AI Chat' ? (
-                <span className="flex items-center gap-1">
-                  <MessageCircle className="h-4 w-4" /> {link.label}
-                </span>
-              ) : (
-                link.label
-              )}
-            </Link>
-          ))}
+        <nav className="hidden md:flex items-center gap-2">
+          {navLinks.map((link) => {
+            // Hide entire Admin section for non-admin users
+            if (link.requireAdmin && !isAdmin) return null;
+
+            const isCurrentPath = pathname === link.href || 
+              (link.dropdown?.some(item => pathname === item.href));
+            
+            // Filter dropdown items based on user permissions
+            const filteredDropdown = link.dropdown?.filter(item => {
+              if (item.requireAdmin) return isAdmin;
+              if (item.requireAuth) return user;
+              return true;
+            });
+
+            if (filteredDropdown && filteredDropdown.length > 0) {
+              return (
+                <DropdownMenu key={link.label}>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "text-sm font-medium transition-colors hover:text-primary h-auto px-3 py-2",
+                        isCurrentPath ? "text-primary" : "text-muted-foreground"
+                      )}
+                    >
+                      {link.label}
+                      <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    {filteredDropdown.map((item) => (
+                      <DropdownMenuItem key={item.href} asChild>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "w-full cursor-pointer",
+                            pathname === item.href && "bg-accent"
+                          )}
+                        >
+                          {item.label === 'AI Chat (Voice + Text)' ? (
+                            <span className="flex items-center gap-2">
+                              <MessageCircle className="h-4 w-4" />
+                              {item.label}
+                            </span>
+                          ) : (
+                            item.label
+                          )}
+                        </Link>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            }
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "text-sm font-medium transition-colors hover:text-primary px-3 py-2 rounded-md",
+                  isCurrentPath ? "text-primary bg-accent" : "text-muted-foreground"
+                )}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
         
          <div className="flex items-center gap-2" suppressHydrationWarning>

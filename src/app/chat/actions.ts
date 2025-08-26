@@ -9,6 +9,7 @@ import {
   getChat
 } from "@/lib/chat-service";
 import { validateEnvironment } from "@/lib/env-config";
+import { enhanceChatWithPuter } from "@/lib/puter-ai";
 
 export interface ChatMessage {
     role: 'user' | 'assistant';
@@ -139,8 +140,8 @@ export async function continueConversation(
     const context = await getChatContext(userId, chatId, 8); // Last 8 messages for context
     console.log('Context retrieved, message count:', context.length);
     
-    // Call AI with context
-    console.log('Calling AI chat function...');
+    // Call AI with context - Enhanced with Puter AI
+    console.log('Calling AI chat function with Puter enhancement...');
     console.log('userInput:', userInput);
     console.log('context before processing:', context);
     
@@ -150,14 +151,18 @@ export async function continueConversation(
     }));
     console.log('processedContext:', processedContext);
     
+    // First try Puter AI enhancement (client-side will be available)
+    // For now, use Gemini as primary with future Puter enhancement
     const chatInput = {
       prompt: userInput,
       context: processedContext
     };
     console.log('Final chat input object:', chatInput);
     
-    const aiResponse = await chat(chatInput);
-    console.log('AI response received:', aiResponse ? 'success' : 'failed');
+    let aiResponse = await chat(chatInput);
+    console.log('Primary AI response received:', aiResponse ? 'success' : 'failed');
+    
+    // Note: Puter AI enhancement will be applied on client-side for browser compatibility
     
     // Add AI response to Firestore
     console.log('Adding AI response to Firestore...');

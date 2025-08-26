@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { validateEnvironment } from "@/lib/env-config";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Settings } from "lucide-react";
-import { SimpleChatClient } from "./simple-chat-client";
+import { EnhancedChatClient } from "./enhanced-chat-client";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function ServerChatPage() {
@@ -74,7 +74,7 @@ export default function ServerChatPage() {
         </CardHeader>
         <CardContent className="p-0 flex-1 min-h-0">
           <ErrorBoundary>
-            <SimpleChatClient />
+            <EnhancedChatClient />
           </ErrorBoundary>
         </CardContent>
       </Card>

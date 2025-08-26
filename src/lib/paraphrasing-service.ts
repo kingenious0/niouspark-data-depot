@@ -2,6 +2,7 @@ import { ai } from '@/ai/genkit';
 import { WORD_LIMIT, type Tone, type Mode, type HumanizationPersona, HUMANIZATION_PERSONAS } from '@/lib/constants';
 import { humanizeText, advancedHumanizeText, ultraHumanizeText, analyzeHumanLikeness, addUltraAggressiveTouches } from '@/lib/humanization';
 import { WEPEnhancedHumanization } from '@/lib/wep-enhanced-humanization';
+import { enhanceParaphraseWithPuter } from '@/lib/puter-ai';
 
 export interface ParaphraseRequest {
   text: string;
@@ -16,6 +17,8 @@ export interface ParaphraseResponse {
   wordCount: number;
   error?: string;
   humanLikenessAnalysis?: any;
+  enhancementProvider?: 'gemini' | 'puter' | 'hybrid';
+  puterEnhanced?: boolean;
 }
 
 /**
@@ -190,12 +193,38 @@ export async function paraphraseText(request: ParaphraseRequest): Promise<Paraph
 
     console.log(`Paraphrasing ${wordCount} words using Gemini (mode: ${mode}, tone: ${tone})`);
 
-    // Call Gemini API through Genkit
-    const response = await ai.generate(prompt);
-    let paraphrasedText = response.text?.trim();
+    // Try Puter AI enhancement first (for browser environments)
+    let paraphrasedText: string;
+    let enhancementProvider: 'gemini' | 'puter' | 'hybrid' = 'gemini';
+    let puterEnhanced = false;
 
-    if (!paraphrasedText) {
-      throw new Error('No response received from AI service');
+    // Note: Puter AI works client-side, so for server-side processing, we use Gemini
+    // Client-side enhancement will be available in the frontend
+    try {
+      if (typeof window !== 'undefined') {
+        // Browser environment - try Puter AI first
+        const puterResult = await enhanceParaphraseWithPuter(text, mode, tone);
+        if (puterResult.success && puterResult.paraphrasedText) {
+          paraphrasedText = puterResult.paraphrasedText;
+          enhancementProvider = 'puter';
+          puterEnhanced = true;
+          console.log('✅ Puter AI enhancement successful');
+        } else {
+          throw new Error('Puter AI enhancement failed, falling back to Gemini');
+        }
+      } else {
+        throw new Error('Server environment, using Gemini');
+      }
+    } catch (puterError) {
+      console.log('ℹ️ Using Gemini AI (Puter not available or failed):', (puterError as Error).message);
+      
+      // Fallback to Gemini API through Genkit
+      const response = await ai.generate(prompt);
+      paraphrasedText = response.text?.trim();
+
+      if (!paraphrasedText) {
+        throw new Error('No response received from AI service');
+      }
     }
 
     // Apply advanced humanization for maximum AI detector resistance
@@ -296,7 +325,9 @@ export async function paraphraseText(request: ParaphraseRequest): Promise<Paraph
       success: true,
       originalText: text,
       paraphrasedText,
-      wordCount
+      wordCount,
+      enhancementProvider,
+      puterEnhanced
     };
 
   } catch (error) {

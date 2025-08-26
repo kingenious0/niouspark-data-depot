@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
+import { getPuterAI } from "@/lib/puter-ai";
+import { NiousparkPageLoading, InlineLoading } from "@/components/niouspark-loading";
 import {
   FileText,
   Upload,
@@ -38,6 +41,8 @@ export default function ParaphraserPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [humanLikenessAnalysis, setHumanLikenessAnalysis] = useState<any>(null);
   const [exportFormat, setExportFormat] = useState<'txt' | 'pdf' | 'docx'>('txt');
+  const [puterEnhanced, setPuterEnhanced] = useState(false);
+  const [puterAvailable, setPuterAvailable] = useState(false);
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
 
@@ -45,6 +50,28 @@ export default function ParaphraserPage() {
   const countWords = useCallback((text: string) => {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   }, []);
+
+  // Check Puter AI availability
+  useEffect(() => {
+    const checkPuterAI = async () => {
+      try {
+        const puterService = getPuterAI();
+        const testResult = await puterService.testConnection();
+        setPuterAvailable(testResult.success);
+        
+        if (testResult.success) {
+          toast({
+            title: "🚀 Puter AI Enhanced",
+            description: "Advanced AI enhancement is available for better results!"
+          });
+        }
+      } catch (error) {
+        setPuterAvailable(false);
+      }
+    };
+
+    checkPuterAI();
+  }, [toast]);
 
   const handleInputChange = (text: string) => {
     setInputText(text);
@@ -306,9 +333,7 @@ export default function ParaphraserPage() {
 
   if (authLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <NiousparkPageLoading message="Loading Paraphraser..." />
     );
   }
 
@@ -423,6 +448,28 @@ export default function ParaphraserPage() {
               </div>
             </div>
 
+            {/* Puter AI Enhancement Toggle */}
+            {puterAvailable && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label htmlFor="puter-toggle" className="text-blue-800 dark:text-blue-200 font-medium">
+                      🚀 Puter AI Enhancement
+                    </Label>
+                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                      Use advanced Puter AI for even better, more creative results
+                    </p>
+                  </div>
+                  <Switch
+                    id="puter-toggle"
+                    checked={puterEnhanced}
+                    onCheckedChange={setPuterEnhanced}
+                    className="data-[state=checked]:bg-blue-600"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex gap-2">
               <Button 
@@ -431,10 +478,7 @@ export default function ParaphraserPage() {
                 className="flex-1"
               >
                 {isProcessing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Processing...
-                  </>
+                  <InlineLoading text="Processing..." size="sm" />
                 ) : (
                   <>
                     <Wand2 className="mr-2 h-4 w-4" />

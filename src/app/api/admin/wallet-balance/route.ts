@@ -1,66 +1,128 @@
 import { NextResponse } from "next/server";
 import { adminDb, adminAuth } from '@/lib/firebase-admin';
+import { headers } from 'next/headers';
+import { fetchWalletBalance } from '@/lib/datamart';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(req.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ success: false, error: "User ID required" }, { status: 400 });
+    // Verify authentication using the same pattern as working endpoints
+    const authorization = headers().get('Authorization');
+    if (!authorization?.startsWith('Bearer ')) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: No auth token provided.' }, { status: 401 });
     }
-
-    // Verify user is admin
-    const userRecord = await adminAuth.getUser(userId);
-    const userRole = userRecord.customClaims?.role;
     
-    if (userRole !== 'admin') {
-      return NextResponse.json({ success: false, error: "Access denied. Admin role required." }, { status: 403 });
+    const idToken = authorization.split('Bearer ')[1];
+    const decodedToken = await adminAuth.verifyIdToken(idToken);
+
+    // Check admin role directly from token (same as get-balance endpoint)
+    if (decodedToken.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Forbidden: User is not an admin.' }, { status: 403 });
     }
 
-    // Get admin's wallet balance
-    const userDoc = await adminDb.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-      return NextResponse.json({ success: false, error: "User not found" }, { status: 404 });
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get('userId') || decodedToken.uid; // Default to requesting user if no userId provided
+
+    // Fetch real DataMart wallet balance
+    console.log("Fetching DataMart wallet balance...");
+    const datamartBalance = await fetchWalletBalance();
+    
+    if (datamartBalance === null) {
+      return NextResponse.json({ 
+        success: false, 
+        error: "Failed to fetch DataMart wallet balance. Please check API configuration." 
+      }, { status: 500 });
     }
 
-    const userData = userDoc.data();
-    const walletBalance = userData?.datamat_wallet_balance || 0;
+    console.log("DataMart balance fetched:", datamartBalance);
 
-    // Get recent wallet transactions
-    const walletTransactionsSnapshot = await adminDb
-      .collection('wallet_transactions')
-      .where('userId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .limit(10)
-      .get();
+    // Get recent DataMart purchase transactions (only purchases, no topups)
+    let datamartTransactionsSnapshot;
+    try {
+      // Query for purchase transactions from the main transactions collection
+      datamartTransactionsSnapshot = await adminDb
+        .collection('transactions')
+        .where('type', '==', 'purchase')
+        .orderBy('createdAt', 'desc')
+        .limit(20)
+        .get();
+    } catch (firestoreError) {
+      console.warn("Firestore orderBy query failed, trying without orderBy:", firestoreError);
+      try {
+        // Fallback: query without orderBy if index doesn't exist
+        datamartTransactionsSnapshot = await adminDb
+          .collection('transactions')
+          .where('type', '==', 'purchase')
+          .limit(20)
+          .get();
+      } catch (fallbackError) {
+        console.error("Firestore fallback query also failed:", fallbackError);
+        // If both queries fail, return data without transactions
+        return NextResponse.json({ 
+          success: true, 
+          data: {
+            datamartBalance,
+            totalTransactions: 0,
+            recentTransactions: []
+          }
+        });
+      }
+    }
 
-    const recentTransactions = walletTransactionsSnapshot.docs.map(doc => {
+    // Format transactions for the new DataMart-focused dashboard
+    const recentTransactions = datamartTransactionsSnapshot.docs.map(doc => {
       const data = doc.data();
       return {
         id: doc.id,
-        type: data.type,
+        type: 'purchase',
         amount: data.amount,
-        description: data.description,
-        balanceBefore: data.balanceBefore,
-        balanceAfter: data.balanceAfter,
+        description: `${data.bundleName || 'Data Bundle'} - ${data.phone || 'N/A'}`,
+        network: data.network,
+        bundleName: data.bundleName,
+        phoneNumber: data.phone,
+        status: data.status,
+        reference: data.reference,
+        datamartTransactionId: data.datamartTransactionId || data.reference,
         createdAt: data.createdAt?.toDate?.() || data.createdAt
       };
     });
 
+    const totalTransactions = datamartTransactionsSnapshot.size;
+
     return NextResponse.json({ 
       success: true, 
       data: {
-        walletBalance,
-        recentTransactions
+        datamartBalance,
+        totalTransactions,
+        recentTransactions,
+        isDatamartMirrored: true // Flag to indicate this is real DataMart data
       }
     });
 
   } catch (err: any) {
     console.error("🔥 Get wallet balance error:", err);
+    console.error("Error details:", {
+      message: err.message,
+      code: err.code,
+      stack: err.stack
+    });
+    
+    // More specific error messages
+    let errorMessage = "Internal Server Error";
+    if (err.code === 'auth/id-token-expired') {
+      errorMessage = "Authentication token expired. Please log in again.";
+    } else if (err.code === 'auth/argument-error') {
+      errorMessage = "Invalid authentication token.";
+    } else if (err.message?.includes('permission')) {
+      errorMessage = "Insufficient permissions to access wallet data.";
+    } else if (err.message) {
+      errorMessage = err.message;
+    }
+    
     return NextResponse.json({ 
       success: false, 
-      error: err.message || "Internal Server Error" 
+      error: errorMessage 
     }, { status: 500 });
   }
 }
