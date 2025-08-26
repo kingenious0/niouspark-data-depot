@@ -175,8 +175,14 @@ export class VoiceService {
       return false;
     }
 
-    // Stop any ongoing speech
-    this.synthesis.cancel();
+    // Stop any ongoing speech safely
+    try {
+      if (this.synthesis.speaking) {
+        this.synthesis.cancel();
+      }
+    } catch (error) {
+      console.warn('Error canceling speech:', error);
+    }
 
     const utterance = new SpeechSynthesisUtterance(text);
     
@@ -318,16 +324,59 @@ export function checkVoiceSupport(): {
     textToSpeech: boolean;
   };
   message: string;
+  browser?: string;
 } {
-  const service = getVoiceService();
-  const support = service.getBrowserSupport();
-  
-  return {
-    isSupported: support.speechRecognition && support.speechSynthesis,
-    features: {
-      speechToText: support.speechRecognition,
-      textToSpeech: support.speechSynthesis
-    },
-    message: support.recommendation || 'Voice features are fully supported in this browser.'
-  };
+  // Enhanced production environment check
+  if (typeof window === 'undefined') {
+    return {
+      isSupported: false,
+      features: {
+        speechToText: false,
+        textToSpeech: false
+      },
+      message: 'Voice features require a browser environment.',
+      browser: 'Server'
+    };
+  }
+
+  try {
+    const service = getVoiceService();
+    const support = service.getBrowserSupport();
+    
+    // Additional production safety checks
+    const actualSTTSupport = support.speechRecognition && (
+      typeof window.SpeechRecognition !== 'undefined' || 
+      typeof window.webkitSpeechRecognition !== 'undefined'
+    );
+    
+    const actualTTSSupport = support.speechSynthesis && 
+      typeof window.speechSynthesis !== 'undefined';
+    
+    console.log('Voice support debug:', {
+      reported: support,
+      actual: { stt: actualSTTSupport, tts: actualTTSSupport },
+      environment: 'production'
+    });
+    
+    return {
+      isSupported: actualSTTSupport && actualTTSSupport,
+      features: {
+        speechToText: actualSTTSupport,
+        textToSpeech: actualTTSSupport
+      },
+      message: support.recommendation || 'Voice features are fully supported in this browser.',
+      browser: support.browser
+    };
+  } catch (error) {
+    console.error('Voice support check failed:', error);
+    return {
+      isSupported: false,
+      features: {
+        speechToText: false,
+        textToSpeech: false
+      },
+      message: 'Voice features are not available due to an error.',
+      browser: 'Unknown'
+    };
+  }
 }

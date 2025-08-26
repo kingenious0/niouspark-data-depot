@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, startTransition } from 'react';
 import { useFormStatus } from 'react-dom';
 import { continueConversation, ChatState } from '@/app/chat/actions';
 import { useAuth } from '@/lib/auth';
@@ -248,10 +248,13 @@ export function EnhancedChatClient() {
     
     setInputValue(transcript);
     
-    // Auto-submit voice input
-    const formData = new FormData();
-    formData.append('message', transcript);
-    handleFormAction(formData);
+    // Auto-submit voice input using startTransition
+    startTransition(() => {
+      const formData = new FormData();
+      formData.append('message', transcript);
+      formAction(formData);
+      setInputValue(''); // Clear the input after voice submission
+    });
 
     toast({
       title: "Voice Message Sent! 🎤",
@@ -352,9 +355,13 @@ export function EnhancedChatClient() {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     if (inputValue.trim()) {
-                      const formData = new FormData();
-                      formData.append('message', inputValue);
-                      handleFormAction(formData);
+                      startTransition(() => {
+                        const formData = new FormData();
+                        formData.append('message', inputValue);
+                        formAction(formData);
+                        setInputValue('');
+                        inputRef.current?.focus();
+                      });
                     }
                   }
                 }}

@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { validateEnvironment } from "@/lib/env-config";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Settings } from "lucide-react";
-import { EnhancedChatClient } from "./enhanced-chat-client";
+import { GeminiStyleChatClient } from "./gemini-style-chat-client";
 import { ErrorBoundary } from "@/components/error-boundary";
 
 export default function ServerChatPage() {
@@ -62,22 +62,10 @@ export default function ServerChatPage() {
 
   // Environment is properly configured, show the chat interface
   return (
-    <div className="container mx-auto py-10 px-0 md:px-6 h-full">
-      <Card className="h-full shadow-2xl flex flex-col">
-        <CardHeader className="text-center border-b flex-shrink-0">
-          <CardTitle className="text-3xl font-headline tracking-tight">
-            Niouspark Smart AI
-          </CardTitle>
-          <CardDescription className="mt-2 text-lg text-muted-foreground">
-            Your personal assistant for anything you need.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0 flex-1 min-h-0">
-          <ErrorBoundary>
-            <EnhancedChatClient />
-          </ErrorBoundary>
-        </CardContent>
-      </Card>
+    <div className="h-full">
+      <ErrorBoundary>
+        <GeminiStyleChatClient />
+      </ErrorBoundary>
     </div>
   );
 }
