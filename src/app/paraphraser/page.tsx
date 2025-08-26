@@ -428,7 +428,7 @@ export default function ParaphraserPage() {
                     <SelectItem value="paraphrase">Paraphrase</SelectItem>
                     <SelectItem value="humanize">Humanize</SelectItem>
                     <SelectItem value="ultra-humanize">Ultra Humanize Pro</SelectItem>
-                    <SelectItem value="wep-humanize">🎯 WEP-Enhanced Humanize</SelectItem>
+                    <SelectItem value="wep-humanize">🚀 Advanced Humanize Pro</SelectItem>
                     <SelectItem value="simplify">Simplify</SelectItem>
                   </SelectContent>
                 </Select>
@@ -485,7 +485,7 @@ export default function ParaphraserPage() {
                     {mode === 'paraphrase' ? 'Paraphrase' : 
                      mode === 'humanize' ? 'Humanize' : 
                      mode === 'ultra-humanize' ? 'Ultra Humanize Pro' : 
-                     mode === 'wep-humanize' ? '🎯 WEP-Enhanced Humanize' : 'Simplify'}
+                     mode === 'wep-humanize' ? '🚀 Advanced Humanize Pro' : 'Simplify'}
                   </>
                 )}
               </Button>
