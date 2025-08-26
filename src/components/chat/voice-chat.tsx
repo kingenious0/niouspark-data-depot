@@ -49,6 +49,11 @@ export function VoiceChat({
     const support = checkVoiceSupport();
     setIsSupported(support.isSupported);
     setSupportInfo(support);
+    
+    // Debug logging
+    console.log('🎤 Voice Chat Component Mounted');
+    console.log('Voice Support:', support);
+    console.log('Browser:', support.features);
   }, []);
 
   // Simulate audio level visualization
@@ -232,19 +237,30 @@ export function VoiceChat({
   }
 
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
+    <div className={cn("flex flex-col gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg", className)}>
+      {/* Voice Features Header */}
+      <div className="flex items-center gap-2 mb-2">
+        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+          🎤 Voice Chat Available
+        </span>
+        <span className="text-xs text-blue-600 dark:text-blue-400">
+          ({supportInfo?.browser || 'Unknown Browser'})
+        </span>
+      </div>
+      
       {/* Voice Input Section */}
       <div className="flex items-center gap-2">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={isListening ? "destructive" : "outline"}
-                size="sm"
+                variant={isListening ? "destructive" : "default"}
+                size="default"
                 onClick={toggleListening}
                 disabled={isDisabled || isSpeaking}
                 className={cn(
-                  "flex-1 transition-all",
+                  "flex-1 transition-all font-medium",
                   isListening && "animate-pulse"
                 )}
               >
@@ -275,12 +291,12 @@ export function VoiceChat({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={isSpeaking ? "destructive" : "outline"}
-                size="sm"
+                variant={isSpeaking ? "destructive" : "secondary"}
+                size="default"
                 onClick={isSpeaking ? stopSpeaking : () => {}}
                 disabled={isDisabled}
                 className={cn(
-                  "transition-all",
+                  "transition-all font-medium",
                   isSpeaking && "animate-pulse"
                 )}
               >
