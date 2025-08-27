@@ -50,8 +50,37 @@ export async function POST(request: NextRequest) {
 
     console.log(`User ${userId} requesting paraphrasing (${mode}, ${tone})`);
 
-    // Process the text
+    // Process the text with Gemini (first pass)
     const result = await paraphraseText({ text, tone, mode });
+
+    // Apply second-pass humanization with free open-source model for enhanced modes
+    if (result.success && result.paraphrasedText && (mode === 'humanize' || mode === 'wep-humanize')) {
+      try {
+        console.log('🔄 Applying second-pass humanization with FLAN-T5-large...');
+        
+        const secondPassResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/second-pass`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: result.paraphrasedText }),
+        });
+
+        if (secondPassResponse.ok) {
+          const secondPassResult = await secondPassResponse.json();
+          if (secondPassResult.final) {
+            result.paraphrasedText = secondPassResult.final;
+            result.secondPassApplied = true;
+            result.secondPassModel = secondPassResult.model;
+            console.log('✅ Second-pass humanization completed successfully');
+          }
+        } else {
+          console.warn('⚠️ Second-pass humanization failed, using Gemini output as fallback');
+          result.secondPassApplied = false;
+        }
+      } catch (error) {
+        console.warn('⚠️ Second-pass humanization error, using Gemini output as fallback:', error);
+        result.secondPassApplied = false;
+      }
+    }
 
     // Log usage for analytics (don't await to avoid slowing response)
     if (result.success) {
@@ -59,7 +88,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Add human-likeness analysis for 'humanize' mode
-    if (result.success && mode === 'humanize' && result.paraphrasedText) {
+    if (result.success && (mode === 'humanize' || mode === 'wep-humanize') && result.paraphrasedText) {
       const humanLikeness = analyzeHumanLikeness(result.paraphrasedText);
       result.humanLikenessAnalysis = humanLikeness;
     }
@@ -134,12 +163,41 @@ export async function PUT(request: NextRequest) {
 
     console.log(`Extracted ${extractResult.text.length} characters from ${file.name}`);
 
-    // Process the extracted text
+    // Process the extracted text with Gemini (first pass)
     const result = await paraphraseText({ 
       text: extractResult.text, 
       tone: tone as any, 
       mode: mode as any 
     });
+
+    // Apply second-pass humanization with free open-source model for enhanced modes
+    if (result.success && result.paraphrasedText && (mode === 'humanize' || mode === 'wep-humanize')) {
+      try {
+        console.log('🔄 Applying second-pass humanization with FLAN-T5-large for file upload...');
+        
+        const secondPassResponse = await fetch(`${process.env.VERCEL_URL || 'http://localhost:3000'}/api/second-pass`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: result.paraphrasedText }),
+        });
+
+        if (secondPassResponse.ok) {
+          const secondPassResult = await secondPassResponse.json();
+          if (secondPassResult.final) {
+            result.paraphrasedText = secondPassResult.final;
+            result.secondPassApplied = true;
+            result.secondPassModel = secondPassResult.model;
+            console.log('✅ Second-pass humanization completed successfully for file upload');
+          }
+        } else {
+          console.warn('⚠️ Second-pass humanization failed for file upload, using Gemini output as fallback');
+          result.secondPassApplied = false;
+        }
+      } catch (error) {
+        console.warn('⚠️ Second-pass humanization error for file upload, using Gemini output as fallback:', error);
+        result.secondPassApplied = false;
+      }
+    }
 
     // Log usage for analytics (don't await to avoid slowing response)
     if (result.success) {
@@ -147,7 +205,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Add human-likeness analysis for 'humanize' mode
-    if (result.success && mode === 'humanize' && result.paraphrasedText) {
+    if (result.success && (mode === 'humanize' || mode === 'wep-humanize') && result.paraphrasedText) {
       const humanLikeness = analyzeHumanLikeness(result.paraphrasedText);
       result.humanLikenessAnalysis = humanLikeness;
     }

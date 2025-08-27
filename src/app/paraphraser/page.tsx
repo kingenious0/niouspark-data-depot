@@ -40,6 +40,8 @@ export default function ParaphraserPage() {
   const [wordCount, setWordCount] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [humanLikenessAnalysis, setHumanLikenessAnalysis] = useState<any>(null);
+  const [secondPassApplied, setSecondPassApplied] = useState(false);
+  const [secondPassModel, setSecondPassModel] = useState<string>('');
   const [exportFormat, setExportFormat] = useState<'txt' | 'pdf' | 'docx'>('txt');
   const [puterEnhanced, setPuterEnhanced] = useState(false);
   const [puterAvailable, setPuterAvailable] = useState(false);
@@ -213,6 +215,10 @@ export default function ParaphraserPage() {
         if (result.humanLikenessAnalysis) {
           setHumanLikenessAnalysis(result.humanLikenessAnalysis);
         }
+
+        // Set second-pass information if available
+        setSecondPassApplied(result.secondPassApplied || false);
+        setSecondPassModel(result.secondPassModel || '');
 
         // If we processed a file, update the input text with extracted content
         if (needsFileProcessing) {
@@ -591,6 +597,21 @@ export default function ParaphraserPage() {
                 <div className="text-sm text-muted-foreground text-center">
                   Output: {countWords(outputText)} words
                 </div>
+
+                {/* Second-pass Humanization Indicator */}
+                {secondPassApplied && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 justify-center">
+                      <Wand2 className="h-4 w-4 text-green-600" />
+                      <span className="text-sm font-medium text-green-800 dark:text-green-200">
+                        ✨ Enhanced with {secondPassModel || 'FLAN-T5-large'}
+                      </span>
+                    </div>
+                    <div className="text-xs text-green-600 dark:text-green-400 text-center mt-1">
+                      Two-stage humanization: Gemini + Open-source model
+                    </div>
+                  </div>
+                )}
 
                 {/* Human-likeness Analysis */}
                 {humanLikenessAnalysis && (
