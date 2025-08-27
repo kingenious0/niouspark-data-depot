@@ -7,7 +7,8 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Bot, User, Volume2, Sparkles, MessageCircle, Send, Loader2, Mic } from 'lucide-react';
+import { Bot, User, Volume2, Sparkles, MessageCircle, Send, Loader2 } from 'lucide-react';
+import VoiceChat from '@/components/chat/voice-chat';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -143,6 +144,7 @@ export function SimpleGeminiChat() {
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const voiceChatRef = useRef(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -152,6 +154,21 @@ export function SimpleGeminiChat() {
   useEffect(() => {
     if (mounted) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [state.messages, mounted]);
+
+  // Auto-speak AI responses when they arrive
+  useEffect(() => {
+    if (mounted && state.messages.length > 0) {
+      const lastMessage = state.messages[state.messages.length - 1];
+      if (lastMessage.role === 'assistant' && lastMessage.content !== getInitialState().messages[0].content) {
+        // Small delay to ensure the message is rendered
+        setTimeout(() => {
+          if (window.voiceChatSpeak) {
+            window.voiceChatSpeak(lastMessage.content);
+          }
+        }, 500);
+      }
     }
   }, [state.messages, mounted]);
 
@@ -188,6 +205,31 @@ export function SimpleGeminiChat() {
       e.preventDefault();
       handleSubmit();
     }
+  };
+
+  const handleVoiceMessage = (transcript: string) => {
+    if (!transcript.trim() || isPending || !user) return;
+    
+    // Set the transcript as the message and submit
+    setMessage(transcript);
+    
+    // Submit the voice message
+    startTransition(() => {
+      const formData = new FormData();
+      formData.append('message', transcript);
+      formAction(formData);
+    });
+
+    // Clear the message
+    setMessage('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
+    toast({
+      title: "Voice message sent! 🎤",
+      description: `"${transcript.substring(0, 50)}${transcript.length > 50 ? '...' : ''}"`
+    });
   };
 
   if (!mounted) {
@@ -315,15 +357,10 @@ export function SimpleGeminiChat() {
               />
               
               <div className="absolute right-3 bottom-3 flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-9 w-9 p-0 rounded-full text-muted-foreground hover:text-foreground"
-                  disabled
-                  title="Voice input (coming soon)"
-                >
-                  <Mic className="h-4 w-4" />
-                </Button>
+                <VoiceChat
+                  onSendMessage={handleVoiceMessage}
+                  isDisabled={isPending || !user}
+                />
                 
                 <Button
                   onClick={handleSubmit}
@@ -352,7 +389,7 @@ export function SimpleGeminiChat() {
               </div>
               <div className="flex items-center gap-1">
                 <Volume2 className="h-3 w-3" />
-                <span>Voice features loading...</span>
+                <span>Voice chat active</span>
               </div>
             </div>
           </Card>
