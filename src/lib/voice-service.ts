@@ -6,6 +6,8 @@ export interface VoiceService {
   isSpeaking: () => boolean;
   isSupported: () => boolean;
   setTranscriptCallback: (callback: (transcript: string) => void) => void;
+  requestPermissions: () => Promise<boolean>;
+  getPermissionStatus: () => Promise<string>;
 }
 
 // Type definitions for Web Speech API
@@ -48,6 +50,55 @@ interface SpeechRecognitionErrorEvent extends Event {
   message: string;
 }
 
+// Check if we're in a secure context (HTTPS or localhost)
+function isSecureContext(): boolean {
+  if (typeof window === 'undefined') return false;
+  
+  const isHttps = window.location.protocol === 'https:';
+  const isLocalhost = window.location.hostname === 'localhost' || 
+                     window.location.hostname === '127.0.0.1' ||
+                     window.location.hostname.includes('localhost');
+  
+  return isHttps || isLocalhost;
+}
+
+// Request microphone permissions explicitly
+async function requestMicrophonePermission(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  
+  try {
+    // Check if permissions API is available
+    if ('permissions' in navigator) {
+      const permission = await (navigator as any).permissions.query({ name: 'microphone' });
+      if (permission.state === 'granted') return true;
+      if (permission.state === 'denied') return false;
+    }
+    
+    // Fallback: try to get user media
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(track => track.stop()); // Release immediately
+    return true;
+  } catch (error) {
+    console.warn('Microphone permission request failed:', error);
+    return false;
+  }
+}
+
+// Get current permission status
+async function getMicrophonePermissionStatus(): Promise<string> {
+  if (typeof window === 'undefined') return 'denied';
+  
+  try {
+    if ('permissions' in navigator) {
+      const permission = await (navigator as any).permissions.query({ name: 'microphone' });
+      return permission.state;
+    }
+    return 'unknown';
+  } catch (error) {
+    return 'unknown';
+  }
+}
+
 // Safe factory function that only runs on client side
 function createVoiceService(): VoiceService | null {
   if (typeof window === 'undefined') return null;
@@ -57,10 +108,27 @@ function createVoiceService(): VoiceService | null {
   let isListeningState = false;
   let isSpeakingState = false;
   let onTranscript: ((transcript: string) => void) | null = null;
+  let hasRequestedPermissions = false;
 
   // Initialize speech services only when needed
-  const initializeSpeechServices = () => {
+  const initializeSpeechServices = async () => {
     try {
+      // Check secure context first
+      if (!isSecureContext()) {
+        console.warn('Voice features require HTTPS or localhost for security');
+        return false;
+      }
+
+      // Request permissions if not already done
+      if (!hasRequestedPermissions) {
+        const hasPermission = await requestMicrophonePermission();
+        if (!hasPermission) {
+          console.warn('Microphone permission denied - voice features disabled');
+          return false;
+        }
+        hasRequestedPermissions = true;
+      }
+
       // Initialize speech synthesis
       if (window.speechSynthesis) {
         synthesis = window.speechSynthesis;
@@ -95,18 +163,22 @@ function createVoiceService(): VoiceService | null {
         };
 
         recognition = newRecognition;
+        return true;
       }
+      
+      return false;
     } catch (error) {
       console.warn('Failed to initialize speech services:', error);
+      return false;
     }
   };
 
   return {
     startListening: async () => {
       if (!recognition) {
-        initializeSpeechServices();
-        if (!recognition) {
-          throw new Error('Speech recognition not supported in this browser');
+        const initialized = await initializeSpeechServices();
+        if (!initialized || !recognition) {
+          throw new Error('Speech recognition not available. Please ensure HTTPS and microphone permissions.');
         }
       }
 
@@ -137,9 +209,9 @@ function createVoiceService(): VoiceService | null {
 
     speak: async (text: string) => {
       if (!synthesis) {
-        initializeSpeechServices();
-        if (!synthesis) {
-          throw new Error('Speech synthesis not supported in this browser');
+        const initialized = await initializeSpeechServices();
+        if (!initialized || !synthesis) {
+          throw new Error('Speech synthesis not available. Please ensure HTTPS and proper browser support.');
         }
       }
 
@@ -183,12 +255,25 @@ function createVoiceService(): VoiceService | null {
     isSpeaking: () => isSpeakingState,
     isSupported: () => {
       if (typeof window === 'undefined') return false;
+      
+      // Check secure context
+      if (!isSecureContext()) return false;
+      
+      // Check browser support
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       return !!SpeechRecognition && !!window.speechSynthesis;
     },
 
     setTranscriptCallback: (callback: (transcript: string) => void) => {
       onTranscript = callback;
+    },
+
+    requestPermissions: async () => {
+      return await requestMicrophonePermission();
+    },
+
+    getPermissionStatus: async () => {
+      return await getMicrophonePermissionStatus();
     }
   };
 }
@@ -243,6 +328,20 @@ export const voiceService: VoiceService = {
     if (voiceServiceInstance) {
       voiceServiceInstance.setTranscriptCallback(callback);
     }
+  },
+
+  requestPermissions: async () => {
+    if (!voiceServiceInstance) {
+      voiceServiceInstance = createVoiceService();
+    }
+    return voiceServiceInstance?.requestPermissions() || false;
+  },
+
+  getPermissionStatus: async () => {
+    if (!voiceServiceInstance) {
+      voiceServiceInstance = createVoiceService();
+    }
+    return voiceServiceInstance?.getPermissionStatus() || 'denied';
   }
 };
 

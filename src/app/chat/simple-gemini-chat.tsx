@@ -417,7 +417,12 @@ export function SimpleGeminiChat() {
               </div>
               <div className="flex items-center gap-1">
                 <Volume2 className="h-3 w-3" />
-                <span>Voice chat active</span>
+                <span className="text-xs">
+                  {typeof window !== 'undefined' && window.location.protocol === 'https:' 
+                    ? 'Voice chat ready' 
+                    : 'Voice chat (HTTPS required)'
+                  }
+                </span>
               </div>
             </div>
           </Card>

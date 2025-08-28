@@ -1,7 +1,6 @@
-import type {NextConfig} from 'next';
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  /* config options here */
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -42,27 +41,38 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  serverExternalPackages: [
-    'google-auth-library',
-    'farmhash-modern', 
-    'firebase-admin',
-    'mongoose',
-    '@opentelemetry/winston-transport'
-  ],
   experimental: {
-    serverActions: {
-      bodySizeLimit: '2mb'
-    },
+    serverComponentsExternalPackages: ['@genkit-ai/google-cloud']
   },
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      handlebars: 'handlebars/dist/cjs/handlebars.js'
-    };
-    return config;
-  },
+  serverExternalPackages: ['google-auth-library', 'firebase-admin', 'farmhash-modern'],
   env: {
     NEXT_PUBLIC_SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL,
+  },
+  // Ensure proper headers for microphone access and voice features
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Permissions-Policy',
+            value: 'microphone=(), camera=()'
+          },
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff'
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY'
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block'
+          }
+        ]
+      }
+    ];
   }
 };
 
