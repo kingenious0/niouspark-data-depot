@@ -44,6 +44,15 @@ function Message({ message, isLatest }: MessageProps) {
     });
   };
 
+  const handleSpeakMessage = () => {
+    if (message.role === 'assistant') {
+      // Import triggerSpeech dynamically to avoid SSR issues
+      import('@/lib/voice-service').then(({ triggerSpeech }) => {
+        triggerSpeech(message.content);
+      }).catch(console.error);
+    }
+  };
+
   return (
     <div className={cn(
       "flex items-start gap-4 max-w-4xl mx-auto py-6",
@@ -118,6 +127,17 @@ function Message({ message, isLatest }: MessageProps) {
           <span className="font-medium">
             {message.role === 'assistant' ? 'NiousparkAI' : 'You'}
           </span>
+          {message.role === 'assistant' && (
+            <Button
+              onClick={handleSpeakMessage}
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-muted/50"
+              title="Listen to this message"
+            >
+              <Volume2 className="h-3 w-3" />
+            </Button>
+          )}
           {isLatest && (
             <Badge variant="outline" className="text-xs px-1 py-0 h-5">
               Latest
@@ -164,9 +184,9 @@ export function SimpleGeminiChat() {
       if (lastMessage.role === 'assistant' && lastMessage.content !== getInitialState().messages[0].content) {
         // Small delay to ensure the message is rendered
         setTimeout(() => {
-          if (window.voiceChatSpeak) {
-            window.voiceChatSpeak(lastMessage.content);
-          }
+          import('@/lib/voice-service').then(({ triggerSpeech }) => {
+            triggerSpeech(lastMessage.content);
+          }).catch(console.error);
         }, 500);
       }
     }
