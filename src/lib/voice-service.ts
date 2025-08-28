@@ -5,202 +5,246 @@ export interface VoiceService {
   isListening: () => boolean;
   isSpeaking: () => boolean;
   isSupported: () => boolean;
+  setTranscriptCallback: (callback: (transcript: string) => void) => void;
 }
 
-class WebSpeechVoiceService implements VoiceService {
-  private recognition: any = null;
-  private synthesis: any = null;
-  private isListeningState = false;
-  private isSpeakingState = false;
-  private onTranscript: ((transcript: string) => void) | null = null;
-  private isInitialized = false;
+// Type definitions for Web Speech API
+interface SpeechRecognition extends EventTarget {
+  lang: string;
+  interimResults: boolean;
+  continuous: boolean;
+  start(): void;
+  stop(): void;
+  onstart: ((event: Event) => void) | null;
+  onend: ((event: Event) => void) | null;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+}
 
-  constructor() {
-    // Don't initialize immediately - wait for client-side
-    if (typeof window !== 'undefined') {
-      this.initializeSpeechServices();
-    }
-  }
+interface SpeechRecognitionEvent extends Event {
+  results: SpeechRecognitionResultList;
+}
 
-  private initializeSpeechServices() {
-    if (this.isInitialized) return;
-    
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  item(index: number): SpeechRecognitionResult;
+  [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+  readonly length: number;
+  item(index: number): SpeechRecognitionAlternative;
+  [index: number]: SpeechRecognitionAlternative;
+  isFinal: boolean;
+}
+
+interface SpeechRecognitionAlternative {
+  transcript: string;
+  confidence: number;
+}
+
+interface SpeechRecognitionErrorEvent extends Event {
+  error: string;
+  message: string;
+}
+
+// Safe factory function that only runs on client side
+function createVoiceService(): VoiceService | null {
+  if (typeof window === 'undefined') return null;
+
+  let recognition: SpeechRecognition | null = null;
+  let synthesis: SpeechSynthesis | null = null;
+  let isListeningState = false;
+  let isSpeakingState = false;
+  let onTranscript: ((transcript: string) => void) | null = null;
+
+  // Initialize speech services only when needed
+  const initializeSpeechServices = () => {
     try {
       // Initialize speech synthesis
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
-        this.synthesis = window.speechSynthesis;
+      if (window.speechSynthesis) {
+        synthesis = window.speechSynthesis;
       }
 
-      // Speech recognition is not available in all browsers
-      if (typeof window !== 'undefined') {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRecognition) {
-          this.recognition = new SpeechRecognition();
-          this.setupRecognition();
-        }
+      // Initialize speech recognition
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const newRecognition = new SpeechRecognition();
+        newRecognition.lang = 'en-US';
+        newRecognition.interimResults = false;
+        newRecognition.continuous = false;
+
+        newRecognition.onstart = () => {
+          isListeningState = true;
+        };
+
+        newRecognition.onend = () => {
+          isListeningState = false;
+        };
+
+        newRecognition.onresult = (event: SpeechRecognitionEvent) => {
+          const transcript = event.results[0][0].transcript;
+          if (onTranscript) {
+            onTranscript(transcript);
+          }
+        };
+
+        newRecognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+          console.error('Speech recognition error:', event.error);
+          isListeningState = false;
+        };
+
+        recognition = newRecognition;
       }
-      
-      this.isInitialized = true;
     } catch (error) {
       console.warn('Failed to initialize speech services:', error);
     }
-  }
+  };
 
-  private setupRecognition() {
-    if (!this.recognition) return;
-
-    try {
-      this.recognition.lang = 'en-US';
-      this.recognition.interimResults = false;
-      this.recognition.continuous = false;
-
-      this.recognition.onstart = () => {
-        this.isListeningState = true;
-      };
-
-      this.recognition.onend = () => {
-        this.isListeningState = false;
-      };
-
-      this.recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        if (this.onTranscript) {
-          this.onTranscript(transcript);
+  return {
+    startListening: async () => {
+      if (!recognition) {
+        initializeSpeechServices();
+        if (!recognition) {
+          throw new Error('Speech recognition not supported in this browser');
         }
-      };
-
-      this.recognition.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        this.isListeningState = false;
-      };
-    } catch (error) {
-      console.warn('Failed to setup speech recognition:', error);
-    }
-  }
-
-  public setTranscriptCallback(callback: (transcript: string) => void) {
-    this.onTranscript = callback;
-    
-    // Initialize services if not already done
-    if (!this.isInitialized && typeof window !== 'undefined') {
-      this.initializeSpeechServices();
-    }
-  }
-
-  public async startListening(): Promise<void> {
-    // Ensure we're on the client side
-    if (typeof window === 'undefined') {
-      throw new Error('Speech recognition is only available in the browser');
-    }
-
-    // Initialize if not done yet
-    if (!this.isInitialized) {
-      this.initializeSpeechServices();
-    }
-
-    if (!this.recognition) {
-      throw new Error('Speech recognition not supported in this browser');
-    }
-
-    // Stop any ongoing speech
-    if (this.synthesis && this.synthesis.speaking) {
-      this.synthesis.cancel();
-      this.isSpeakingState = false;
-    }
-
-    try {
-      this.recognition.start();
-    } catch (error) {
-      console.error('Failed to start speech recognition:', error);
-      throw error;
-    }
-  }
-
-  public stopListening(): void {
-    if (this.recognition && this.isListeningState) {
-      try {
-        this.recognition.stop();
-      } catch (error) {
-        console.warn('Error stopping speech recognition:', error);
       }
-      this.isListeningState = false;
-    }
-  }
 
-  public async speak(text: string): Promise<void> {
-    // Ensure we're on the client side
-    if (typeof window === 'undefined') {
-      throw new Error('Speech synthesis is only available in the browser');
-    }
-
-    // Initialize if not done yet
-    if (!this.isInitialized) {
-      this.initializeSpeechServices();
-    }
-
-    if (!this.synthesis) {
-      throw new Error('Speech synthesis not supported in this browser');
-    }
-
-    // Stop any ongoing speech
-    if (this.synthesis.speaking) {
-      this.synthesis.cancel();
-    }
-
-    return new Promise((resolve, reject) => {
-      try {
-        const utterance = new (window as any).SpeechSynthesisUtterance(text);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.9; // Slightly slower for clarity
-        utterance.pitch = 1.0;
-        utterance.volume = 1.0;
-
-        utterance.onstart = () => {
-          this.isSpeakingState = true;
-        };
-
-        utterance.onend = () => {
-          this.isSpeakingState = false;
-          resolve();
-        };
-
-        utterance.onerror = (event: any) => {
-          console.error('Speech synthesis error:', event.error);
-          this.isSpeakingState = false;
-          reject(new Error(`Speech synthesis failed: ${event.error}`));
-        };
-
-        this.synthesis.speak(utterance);
-      } catch (error) {
-        console.error('Failed to create speech utterance:', error);
-        reject(error);
+      // Stop any ongoing speech
+      if (synthesis && synthesis.speaking) {
+        synthesis.cancel();
+        isSpeakingState = false;
       }
-    });
-  }
 
-  public isListening(): boolean {
-    return this.isListeningState;
-  }
+      try {
+        recognition!.start();
+      } catch (error) {
+        console.error('Failed to start speech recognition:', error);
+        throw error;
+      }
+    },
 
-  public isSpeaking(): boolean {
-    return this.isSpeakingState;
-  }
+    stopListening: () => {
+      if (recognition && isListeningState) {
+        try {
+          recognition.stop();
+        } catch (error) {
+          console.warn('Error stopping speech recognition:', error);
+        }
+        isListeningState = false;
+      }
+    },
 
-  public isSupported(): boolean {
-    // Only check support on the client side
-    if (typeof window === 'undefined') return false;
-    
-    // Initialize if not done yet
-    if (!this.isInitialized) {
-      this.initializeSpeechServices();
+    speak: async (text: string) => {
+      if (!synthesis) {
+        initializeSpeechServices();
+        if (!synthesis) {
+          throw new Error('Speech synthesis not supported in this browser');
+        }
+      }
+
+      // Stop any ongoing speech
+      if (synthesis.speaking) {
+        synthesis.cancel();
+      }
+
+      return new Promise((resolve, reject) => {
+        try {
+          const utterance = new (window as any).SpeechSynthesisUtterance(text);
+          utterance.lang = 'en-US';
+          utterance.rate = 0.9; // Slightly slower for clarity
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
+
+          utterance.onstart = () => {
+            isSpeakingState = true;
+          };
+
+          utterance.onend = () => {
+            isSpeakingState = false;
+            resolve();
+          };
+
+          utterance.onerror = (event: any) => {
+            console.error('Speech synthesis error:', event.error);
+            isSpeakingState = false;
+            reject(new Error(`Speech synthesis failed: ${event.error}`));
+          };
+
+          synthesis!.speak(utterance);
+        } catch (error) {
+          console.error('Failed to create speech utterance:', error);
+          reject(error);
+        }
+      });
+    },
+
+    isListening: () => isListeningState,
+    isSpeaking: () => isSpeakingState,
+    isSupported: () => {
+      if (typeof window === 'undefined') return false;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      return !!SpeechRecognition && !!window.speechSynthesis;
+    },
+
+    setTranscriptCallback: (callback: (transcript: string) => void) => {
+      onTranscript = callback;
     }
-    
-    return !!(this.recognition && this.synthesis);
-  }
+  };
 }
 
-// Create and export a singleton instance
-export const voiceService = new WebSpeechVoiceService();
+// Create and export a singleton instance (only on client side)
+let voiceServiceInstance: VoiceService | null = null;
+
+export const voiceService: VoiceService = {
+  startListening: async () => {
+    if (!voiceServiceInstance) {
+      voiceServiceInstance = createVoiceService();
+    }
+    if (!voiceServiceInstance) {
+      throw new Error('Voice service not available');
+    }
+    return voiceServiceInstance.startListening();
+  },
+
+  stopListening: () => {
+    if (voiceServiceInstance) {
+      voiceServiceInstance.stopListening();
+    }
+  },
+
+  speak: async (text: string) => {
+    if (!voiceServiceInstance) {
+      voiceServiceInstance = createVoiceService();
+    }
+    if (!voiceServiceInstance) {
+      throw new Error('Voice service not available');
+    }
+    return voiceServiceInstance.speak(text);
+  },
+
+  isListening: () => {
+    return voiceServiceInstance?.isListening() || false;
+  },
+
+  isSpeaking: () => {
+    return voiceServiceInstance?.isSpeaking() || false;
+  },
+
+  isSupported: () => {
+    if (typeof window === 'undefined') return false;
+    if (!voiceServiceInstance) {
+      voiceServiceInstance = createVoiceService();
+    }
+    return voiceServiceInstance?.isSupported() || false;
+  },
+
+  setTranscriptCallback: (callback: (transcript: string) => void) => {
+    if (voiceServiceInstance) {
+      voiceServiceInstance.setTranscriptCallback(callback);
+    }
+  }
+};
 
 // Export a function to trigger speech (for use in chat components)
 export const triggerSpeech = (text: string) => {
