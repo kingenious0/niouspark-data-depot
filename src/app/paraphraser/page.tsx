@@ -53,27 +53,28 @@ export default function ParaphraserPage() {
     return text.trim().split(/\s+/).filter(word => word.length > 0).length;
   }, []);
 
-  // Check Puter AI availability
-  useEffect(() => {
-    const checkPuterAI = async () => {
-      try {
-        const puterService = getPuterAI();
-        const testResult = await puterService.testConnection();
-        setPuterAvailable(testResult.success);
-        
-        if (testResult.success) {
-          toast({
-            title: "🚀 Puter AI Enhanced",
-            description: "Advanced AI enhancement is available for better results!"
-          });
-        }
-      } catch (error) {
-        setPuterAvailable(false);
+  // Check Puter AI availability only when user explicitly wants to use it
+  const checkPuterAI = useCallback(async () => {
+    try {
+      const puterService = getPuterAI();
+      const testResult = await puterService.testConnection();
+      setPuterAvailable(testResult.success);
+      
+      if (testResult.success) {
+        toast({
+          title: "🚀 Puter AI Enhanced",
+          description: "Advanced AI enhancement is available for better results!"
+        });
       }
-    };
-
-    checkPuterAI();
+    } catch (error) {
+      setPuterAvailable(false);
+    }
   }, [toast]);
+
+  // Remove automatic health check - only check when user toggles Puter AI
+  // useEffect(() => {
+  //   checkPuterAI();
+  // }, [checkPuterAI]);
 
   const handleInputChange = (text: string) => {
     setInputText(text);

@@ -46,10 +46,14 @@ function Message({ message, isLatest }: MessageProps) {
 
   const handleSpeakMessage = () => {
     if (message.role === 'assistant') {
-      // Import triggerSpeech dynamically to avoid SSR issues
-      import('@/lib/voice-service').then(({ triggerSpeech }) => {
-        triggerSpeech(message.content);
-      }).catch(console.error);
+      // Only run on client side and import triggerSpeech dynamically to avoid SSR issues
+      if (typeof window !== 'undefined') {
+        import('@/lib/voice-service').then(({ triggerSpeech }) => {
+          triggerSpeech(message.content);
+        }).catch((error) => {
+          console.warn('Failed to speak message:', error);
+        });
+      }
     }
   };
 
@@ -182,11 +186,15 @@ export function SimpleGeminiChat() {
     if (mounted && state.messages.length > 0) {
       const lastMessage = state.messages[state.messages.length - 1];
       if (lastMessage.role === 'assistant' && lastMessage.content !== getInitialState().messages[0].content) {
-        // Small delay to ensure the message is rendered
+        // Small delay to ensure the message is rendered and we're on client side
         setTimeout(() => {
-          import('@/lib/voice-service').then(({ triggerSpeech }) => {
-            triggerSpeech(lastMessage.content);
-          }).catch(console.error);
+          if (typeof window !== 'undefined') {
+            import('@/lib/voice-service').then(({ triggerSpeech }) => {
+              triggerSpeech(lastMessage.content);
+            }).catch((error) => {
+              console.warn('Failed to auto-speak AI response:', error);
+            });
+          }
         }, 500);
       }
     }

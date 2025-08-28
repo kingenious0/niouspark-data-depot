@@ -16,20 +16,36 @@ export default function VoiceChat({ onSendMessage, onSpeak, isDisabled = false }
   const [listening, setListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isVoiceSupported, setIsVoiceSupported] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  // Check browser support on mount
+  // Handle SSR - only run on client side
   useEffect(() => {
-    setIsVoiceSupported(voiceService.isSupported());
+    setMounted(true);
+  }, []);
+
+  // Check browser support on mount (client side only)
+  useEffect(() => {
+    if (!mounted) return;
     
-    // Set up transcript callback
-    voiceService.setTranscriptCallback((transcript) => {
-      console.log("User said:", transcript);
-      onSendMessage(transcript);
-    });
-  }, [onSendMessage]);
+    try {
+      const supported = voiceService.isSupported();
+      setIsVoiceSupported(supported);
+      
+      if (supported) {
+        // Set up transcript callback
+        voiceService.setTranscriptCallback((transcript) => {
+          console.log("User said:", transcript);
+          onSendMessage(transcript);
+        });
+      }
+    } catch (error) {
+      console.warn('Voice service not supported:', error);
+      setIsVoiceSupported(false);
+    }
+  }, [mounted, onSendMessage]);
 
   const startListening = async () => {
-    if (!isVoiceSupported || isDisabled) return;
+    if (!isVoiceSupported || isDisabled || !mounted) return;
 
     try {
       await voiceService.startListening();
@@ -43,12 +59,18 @@ export default function VoiceChat({ onSendMessage, onSpeak, isDisabled = false }
   };
 
   const stopListening = () => {
-    voiceService.stopListening();
+    if (!mounted) return;
+    
+    try {
+      voiceService.stopListening();
+    } catch (error) {
+      console.warn('Error stopping listening:', error);
+    }
     setListening(false);
   };
 
   const speak = async (text: string) => {
-    if (isDisabled) return;
+    if (isDisabled || !mounted) return;
 
     try {
       setIsSpeaking(true);
@@ -73,14 +95,24 @@ export default function VoiceChat({ onSendMessage, onSpeak, isDisabled = false }
     }
   };
 
-  // Update listening state based on voice service
+  // Update listening state based on voice service (client side only)
   useEffect(() => {
+    if (!mounted) return;
+    
     const checkListeningState = () => {
-      setListening(voiceService.isListening());
+      try {
+        setListening(voiceService.isListening());
+      } catch (error) {
+        console.warn('Error checking listening state:', error);
+      }
     };
 
     const checkSpeakingState = () => {
-      setIsSpeaking(voiceService.isSpeaking());
+      try {
+        setIsSpeaking(voiceService.isSpeaking());
+      } catch (error) {
+        console.warn('Error checking speaking state:', error);
+      }
     };
 
     // Check states periodically
@@ -90,7 +122,12 @@ export default function VoiceChat({ onSendMessage, onSpeak, isDisabled = false }
     }, 100);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [mounted]);
+
+  // Don't render anything until mounted (SSR safety)
+  if (!mounted) {
+    return null;
+  }
 
   if (!isVoiceSupported) {
     return (
