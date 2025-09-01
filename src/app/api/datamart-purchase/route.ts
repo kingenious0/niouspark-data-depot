@@ -40,6 +40,12 @@ export async function POST(req: Request) {
       }
     }
 
+    // Additional safeguard: If somehow an admin user gets through with paystack gateway, force wallet
+    if (userRole === 'admin' && gateway === 'paystack') {
+      console.warn(`⚠️ CRITICAL: Admin user ${userId} was set to use Paystack! Forcing wallet gateway.`);
+      gateway = 'wallet';
+    }
+
     // Format phone number and network for Datamart API
     const formattedPhone = datamartAPI.constructor.formatPhoneNumber(phoneNumber);
     const datamartNetwork = datamartAPI.constructor.getNetworkIdentifier(network);
@@ -105,6 +111,15 @@ export async function POST(req: Request) {
     } else {
       // Customer Paystack purchase - return Paystack redirect URL
       // This will be handled by the existing Paystack flow
+      // Double-check that this is not an admin user
+      if (userRole === 'admin') {
+        console.error(`❌ CRITICAL: Admin user ${userId} reached Paystack flow! This should never happen.`);
+        return NextResponse.json({
+          success: false,
+          error: "System error: Admin user incorrectly routed to payment flow"
+        }, { status: 500 });
+      }
+      
       return NextResponse.json({
         success: true,
         message: "Bundle purchase initiated, redirecting to Paystack",

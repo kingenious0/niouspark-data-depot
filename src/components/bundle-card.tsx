@@ -203,7 +203,8 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       
       const decodedToken = await fetch('/api/auth/verify-token', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${idToken}` }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
       }).then(res => res.json());
       
       console.log("🔍 Token verification result:", decodedToken);
@@ -297,6 +298,17 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
   const handleDatamartPurchase = async () => {
     setLoading(true);
     
+    // Double-check admin status before proceeding
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "This feature is only available for admin users.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+    
     if (!phone.match(/^\+233[0-9]{9}$/)) {
       toast({
         title: "Invalid Phone Number",
@@ -312,6 +324,15 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       const capacity = bundle.capacity || bundle.name.match(/(\d+)GB/)?.[1] || "1";
       const network = bundle.network || "MTN"; // Default to MTN if not specified
 
+      console.log("🔄 Admin Datamart purchase initiated:", {
+        phoneNumber: phone,
+        network: network,
+        capacity: capacity,
+        userId: user?.uid,
+        email: email,
+        bundleName: bundle.name,
+      });
+
       const res = await fetch("/api/datamart-purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -326,15 +347,19 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       });
 
       const result = await res.json();
+      console.log("🔄 Datamart purchase response:", result);
       
       if (result.success) {
         if (result.data.requiresPayment) {
-          // This shouldn't happen for admin purchases, but handle gracefully
+          // This should NEVER happen for admin purchases - log error and prevent redirect
+          console.error("❌ CRITICAL: Admin user was marked as requiring payment! This should not happen.");
           toast({
-            title: "Purchase Initiated",
-            description: "Redirecting to payment gateway...",
+            title: "System Error",
+            description: "Admin purchase incorrectly flagged for payment. Please contact support.",
+            variant: "destructive",
           });
-          // Handle Paystack redirect here if needed
+          setLoading(false);
+          return;
         } else {
           // Admin wallet purchase successful
           toast({
@@ -380,6 +405,17 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
   const handlePurchase = async () => {
     setShowConfirmDialog(false);
     setLoading(true);
+
+    // Prevent admin users from using regular payment flow
+    if (isAdmin) {
+      toast({
+        title: "Admin Access Required",
+        description: "Admin users should use the Datamart wallet purchase option.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
 
     if (!email) {
       toast({
@@ -578,6 +614,19 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
                 <CreditCard className="mr-2 h-4 w-4" />
                 Pay with {paymentChannel === "mobile_money" ? "Mobile Money" : "Card"} (GH₵{bundle.price.toFixed(2)})
               </Button>
+            )}
+            
+            {/* Admin-only message when Datamart purchase is not available */}
+            {isAdmin && !showDatamartPurchase && (
+              <div className="w-full p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
+                <div className="flex items-center gap-2 text-yellow-800">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">Admin Wallet Purchase Unavailable</span>
+                </div>
+                <p className="text-xs text-yellow-700 mt-1">
+                  Datamart wallet purchase is currently unavailable. Please contact support.
+                </p>
+              </div>
             )}
             
             <DialogClose asChild>
