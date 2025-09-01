@@ -78,6 +78,7 @@ export async function POST(req: Request) {
       network: network,
       capacity: capacity,
       status: 'completed',
+      type: 'purchase', // Add type field for wallet balance API
       createdAt: Timestamp.now(),
       updatedAt: Timestamp.now(),
       gateway: gateway,

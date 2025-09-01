@@ -36,26 +36,49 @@ export async function GET(req: Request) {
     }
 
     console.log("DataMart balance fetched:", datamartBalance);
+    console.log("🔍 Fetching transactions for admin user:", userId);
 
-    // Get recent DataMart purchase transactions (only purchases, no topups)
+    // Get recent DataMart purchase transactions (admin purchases and all purchases)
     let datamartTransactionsSnapshot;
     try {
-      // Query for purchase transactions from the main transactions collection
+      // Query for admin purchase transactions first, then fallback to all purchases
       datamartTransactionsSnapshot = await adminDb
         .collection('transactions')
+        .where('adminPurchase', '==', true)
         .where('type', '==', 'purchase')
         .orderBy('createdAt', 'desc')
         .limit(20)
         .get();
+        
+      // If no admin purchases found, get all purchase transactions
+      if (datamartTransactionsSnapshot.empty) {
+        console.log("No admin purchases found, fetching all purchase transactions");
+        datamartTransactionsSnapshot = await adminDb
+          .collection('transactions')
+          .where('type', '==', 'purchase')
+          .orderBy('createdAt', 'desc')
+          .limit(20)
+          .get();
+      }
     } catch (firestoreError) {
       console.warn("Firestore orderBy query failed, trying without orderBy:", firestoreError);
       try {
         // Fallback: query without orderBy if index doesn't exist
         datamartTransactionsSnapshot = await adminDb
           .collection('transactions')
+          .where('adminPurchase', '==', true)
           .where('type', '==', 'purchase')
           .limit(20)
           .get();
+          
+        // If no admin purchases found, get all purchase transactions
+        if (datamartTransactionsSnapshot.empty) {
+          datamartTransactionsSnapshot = await adminDb
+            .collection('transactions')
+            .where('type', '==', 'purchase')
+            .limit(20)
+            .get();
+        }
       } catch (fallbackError) {
         console.error("Firestore fallback query also failed:", fallbackError);
         // If both queries fail, return data without transactions
@@ -77,18 +100,24 @@ export async function GET(req: Request) {
         id: doc.id,
         type: 'purchase',
         amount: data.amount,
-        description: `${data.bundleName || 'Data Bundle'} - ${data.phone || 'N/A'}`,
+        description: `${data.bundleName || 'Data Bundle'} - ${data.phoneNumber || data.phone || 'N/A'}`,
         network: data.network,
         bundleName: data.bundleName,
-        phoneNumber: data.phone,
+        phoneNumber: data.phoneNumber || data.phone, // Handle both field names
         status: data.status,
         reference: data.reference,
-        datamartTransactionId: data.datamartTransactionId || data.reference,
+        datamartTransactionId: data.datamartTransactionRef || data.datamartTransactionId || data.reference,
         createdAt: data.createdAt?.toDate?.() || data.createdAt
       };
     });
 
     const totalTransactions = datamartTransactionsSnapshot.size;
+    
+    console.log("📊 Transaction query results:", {
+      totalFound: totalTransactions,
+      adminPurchases: recentTransactions.filter(t => t.type === 'purchase').length,
+      sampleTransaction: recentTransactions[0] || 'No transactions found'
+    });
 
     return NextResponse.json({ 
       success: true, 
