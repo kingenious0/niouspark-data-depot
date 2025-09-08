@@ -19,11 +19,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { FirebaseError } from "firebase/app";
+import { isValidGhanaPhoneNumber } from "@/lib/sms";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordMatch, setPasswordMatch] = useState(true);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const { toast } = useToast();
@@ -44,8 +48,19 @@ export default function SignupPage() {
       return;
     }
 
+    // Validate phone number format if provided
+    if (phoneNumber && !isValidGhanaPhoneNumber(phoneNumber)) {
+      toast({
+        title: "Invalid Phone Number",
+        description: "Please enter a valid Ghana phone number (e.g., 233XXXXXXXXX or 0XXXXXXXXX).",
+        variant: "destructive",
+      });
+      setLoading(false);
+      return;
+    }
+
     try {
-      await signup(name, email, password);
+      await signup(name, email, password, phoneNumber || undefined);
       toast({
         title: "Signup Successful",
         description: "Welcome! Your account has been created.",
@@ -139,6 +154,19 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 />
+            </div>
+            <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number (Optional)</Label>
+            <Input 
+                id="phone" 
+                type="tel" 
+                placeholder="233XXXXXXXXX or 0XXXXXXXXX" 
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                />
+            <p className="text-xs text-muted-foreground">
+              Enter your Ghana phone number to receive SMS notifications
+            </p>
             </div>
             <div className="space-y-2">
             <Label htmlFor="password">Password</Label>

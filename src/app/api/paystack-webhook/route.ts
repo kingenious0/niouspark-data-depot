@@ -4,6 +4,8 @@ import crypto from 'crypto';
 import { adminDb } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import { deliverDataBundle } from '@/lib/datamart';
+import { sendSms } from '@/lib/sms';
+import { SMS_TEMPLATES, processSmsTemplate } from '@/config/sms';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
 
@@ -36,7 +38,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { reference, status, metadata, id: transactionId } = event.data;
-    const { firestoreDocId, bundleId, phone: phoneNumber } = metadata;
+    const { firestoreDocId, bundleId, phone: phoneNumber, bundleName, amount } = metadata;
     const transactionsRef = adminDb.collection('transactions');
       
     // Use the firestoreDocId from metadata (best), otherwise query by reference
@@ -82,13 +84,27 @@ export async function POST(req: NextRequest) {
         
         const deliveryResult = await deliverDataBundle(phoneNumber, bundleId);
 
-        // 3. If delivery is successful, mark transaction as 'completed'
-        await docRef.update({
-            status: 'completed',
-            updatedAt: Timestamp.now(),
-            datamartResult: deliveryResult,
-        });
-        console.log(`✅ Bundle delivery for ${docRef.id} successful. Transaction marked 'completed'.`);
+         // 3. If delivery is successful, mark transaction as 'completed'
+         await docRef.update({
+             status: 'completed',
+             updatedAt: Timestamp.now(),
+             datamartResult: deliveryResult,
+         });
+         console.log(`✅ Bundle delivery for ${docRef.id} successful. Transaction marked 'completed'.`);
+
+         // Send SMS notifications after successful delivery
+         try {
+           const bundleDetails = bundleName || `${bundleId}`;
+           const bundleMessage = processSmsTemplate(SMS_TEMPLATES.BUNDLE_PURCHASED, {
+             bundle: bundleDetails
+           });
+           
+           await sendSms(phoneNumber, bundleMessage, reference);
+           console.log(`📱 Bundle purchase SMS sent to ${phoneNumber}`);
+         } catch (smsError) {
+           console.error('Bundle purchase SMS failed:', smsError);
+           // Don't fail the webhook if SMS fails
+         }
 
     } catch (deliveryError: any) {
         console.error(`🔥 Data bundle delivery FAILED for transaction ${docRef.id}:`, deliveryError);
@@ -98,6 +114,18 @@ export async function POST(req: NextRequest) {
             updatedAt: Timestamp.now(),
             deliveryError: deliveryError.message,
         });
+
+        // Send payment failure SMS
+        try {
+          const failureMessage = processSmsTemplate(SMS_TEMPLATES.PAYMENT_FAILED, {
+            reason: deliveryError.message || 'Bundle delivery failed'
+          });
+          
+          await sendSms(phoneNumber, failureMessage, reference);
+          console.log(`📱 Payment failure SMS sent to ${phoneNumber}`);
+        } catch (smsError) {
+          console.error('Payment failure SMS failed:', smsError);
+        }
     }
 
     return NextResponse.json({ status: 'success' });

@@ -3,6 +3,8 @@ import { adminAuth } from '@/lib/firebase-admin';
 import { datamartAPI, DatamartPurchaseRequest } from '@/lib/datamart-api';
 import { Timestamp } from "firebase-admin/firestore";
 import { adminDb } from '@/lib/firebase-admin';
+import { sendSms } from '@/lib/sms';
+import { SMS_TEMPLATES, processSmsTemplate } from '@/config/sms';
 
 export async function POST(req: Request) {
   try {
@@ -92,6 +94,33 @@ export async function POST(req: Request) {
 
     const transactionRef = await adminDb.collection('transactions').add(transactionData);
     console.log("✅ Transaction logged in database:", transactionRef.id);
+
+    // Send SMS notifications after successful purchase
+    try {
+      const bundleDetails = bundleName || `${capacity}GB ${network} Bundle`;
+      
+      if (userRole === 'admin') {
+        // Send admin purchase notification
+        const adminMessage = processSmsTemplate(SMS_TEMPLATES.ADMIN_PURCHASE, {
+          bundle: bundleDetails,
+          admin: 'Admin User'
+        });
+        
+        await sendSms(phoneNumber, adminMessage, datamartResponse.data.transactionReference);
+        console.log(`📱 Admin purchase SMS sent to ${phoneNumber}`);
+      } else {
+        // Send regular purchase confirmation
+        const purchaseMessage = processSmsTemplate(SMS_TEMPLATES.BUNDLE_PURCHASED, {
+          bundle: bundleDetails
+        });
+        
+        await sendSms(phoneNumber, purchaseMessage, datamartResponse.data.transactionReference);
+        console.log(`📱 Bundle purchase SMS sent to ${phoneNumber}`);
+      }
+    } catch (smsError) {
+      console.error('Bundle purchase SMS failed:', smsError);
+      // Don't fail the purchase if SMS fails
+    }
 
     // Return success response
     if (gateway === 'wallet') {

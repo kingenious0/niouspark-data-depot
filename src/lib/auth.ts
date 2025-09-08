@@ -15,6 +15,8 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
+import { sendSms } from "./sms";
+import { SMS_TEMPLATES } from "../config/sms";
 
 interface AppUser extends User {
     role?: 'admin' | 'customer';
@@ -69,18 +71,37 @@ export const login = async (email: string, password: string): Promise<{ user: Us
   return { user: userCredential.user, role };
 }
 
-export const signup = async (name: string, email: string, password: string) => {
+export const signup = async (name: string, email: string, password: string, phoneNumber?: string) => {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
     if (user) {
         await updateProfile(user, { displayName: name });
-        // Set default role in Firestore, which will be picked up by the custom claims trigger.
-        await setDoc(doc(db, "users", user.uid), {
+        
+        // Prepare user data with phone number if provided
+        const userData: any = {
             email: user.email,
             displayName: name,
             role: "customer"
-        });
+        };
+        
+        // Add phone number if provided and valid
+        if (phoneNumber) {
+            userData.phoneNumber = phoneNumber;
+        }
+        
+        await setDoc(doc(db, "users", user.uid), userData);
         await user.getIdToken(true); // Force refresh of token
+
+        // Send welcome SMS after successful account creation
+        if (phoneNumber) {
+            try {
+                await sendSms(phoneNumber, SMS_TEMPLATES.SIGNUP);
+                console.log(`✅ Welcome SMS sent to ${phoneNumber}`);
+            } catch (error) {
+                console.error('Signup SMS failed:', error);
+                // Don't fail the signup process if SMS fails
+            }
+        }
     }
     return userCredential;
 }
