@@ -15,8 +15,6 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useEffect, useState } from "react";
-import { sendSms } from "./sms";
-import { SMS_TEMPLATES } from "../config/sms";
 
 interface AppUser extends User {
     role?: 'admin' | 'customer';
@@ -93,14 +91,33 @@ export const signup = async (name: string, email: string, password: string, phon
         await user.getIdToken(true); // Force refresh of token
 
         // Send welcome SMS after successful account creation
+        console.log('🔍 SMS Debug - Phone number provided:', phoneNumber);
         if (phoneNumber) {
             try {
-                await sendSms(phoneNumber, SMS_TEMPLATES.SIGNUP);
-                console.log(`✅ Welcome SMS sent to ${phoneNumber}`);
+                console.log('🔍 SMS Debug - Calling server API to send SMS...');
+                const response = await fetch('/api/send-welcome-sms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        phoneNumber, 
+                        userName: name 
+                    })
+                });
+                
+                const result = await response.json();
+                console.log('🔍 SMS Debug - Server response:', result);
+                
+                if (result.success) {
+                    console.log(`✅ Welcome SMS sent to ${phoneNumber}`);
+                } else {
+                    console.error('❌ SMS failed:', result.error);
+                }
             } catch (error) {
-                console.error('Signup SMS failed:', error);
+                console.error('❌ Signup SMS failed:', error);
                 // Don't fail the signup process if SMS fails
             }
+        } else {
+            console.log('🔍 SMS Debug - No phone number provided, skipping SMS');
         }
     }
     return userCredential;

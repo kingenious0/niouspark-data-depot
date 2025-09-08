@@ -44,6 +44,13 @@ export async function sendSms(to: string, text: string, msgId?: string): Promise
     };
 
     console.log(`📱 Sending SMS to ${normalizedPhone}:`, { messageId, text: text.substring(0, 50) + '...' });
+    console.log('🔍 SMS Debug - Full payload:', JSON.stringify(payload, null, 2));
+    console.log('🔍 SMS Debug - API URL:', FROG_SMS_API_URL);
+    console.log('🔍 SMS Debug - Headers:', {
+      'API-KEY': FROG_SMS_API_KEY ? '***' + FROG_SMS_API_KEY.slice(-4) : 'MISSING',
+      'USERNAME': FROG_SMS_USERNAME || 'MISSING',
+      'Content-Type': 'application/json'
+    });
 
     const response = await axios.post(`${FROG_SMS_API_URL}/sms/send`, payload, {
       headers: {
@@ -66,6 +73,18 @@ export async function sendSms(to: string, text: string, msgId?: string): Promise
 
   } catch (error: any) {
     console.error(`❌ SMS sending failed to ${to}:`, error.message);
+    
+    // Log detailed error information
+    if (error.response) {
+      console.error('🔍 SMS Error - Response status:', error.response.status);
+      console.error('🔍 SMS Error - Response data:', error.response.data);
+      console.error('🔍 SMS Error - Response headers:', error.response.headers);
+    } else if (error.request) {
+      console.error('🔍 SMS Error - No response received:', error.request);
+    } else {
+      console.error('🔍 SMS Error - Request setup error:', error.message);
+    }
+    
     return {
       success: false,
       error: error.message || 'Unknown error occurred'
