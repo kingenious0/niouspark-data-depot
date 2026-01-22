@@ -8,8 +8,21 @@ import { ThemeProvider } from '@/components/theme-provider';
 import AppLoadingWrapper from '@/components/app-loading-wrapper';
 
 export const metadata: Metadata = {
-  title: 'Niouspark Data Depot',
-  description: 'Your one-stop shop for data bundles.',
+  title: {
+    default: 'Niouspark Data Depot | Best Data Plug in Ghana',
+    template: '%s | Niouspark Data Depot',
+  },
+  description: 'Buy cheap MTN, Telecel, and AirtelTigo data bundles in Ghana. Non-expiry, instant delivery, and secure payments. Join thousands of happy customers today.',
+  keywords: ['Ghana data bundles', 'cheap data', 'MTN non-expiry', 'Telecel data', 'AirtelTigo data', 'Niouspark', 'internet data Ghana'],
+  authors: [{ name: 'Niouspark Data Depot' }],
+  openGraph: {
+    type: 'website',
+    locale: 'en_GH',
+    url: 'https://niouspark-data-depot.vercel.app',
+    title: 'Niouspark Data Depot | Best Data Plug in Ghana',
+    description: 'Buy cheap MTN, Telecel, and AirtelTigo data bundles in Ghana. Non-expiry, instant delivery.',
+    siteName: 'Niouspark Data Depot',
+  },
   icons: {
     icon: '/favicon.ico',
   },
@@ -35,7 +48,7 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >

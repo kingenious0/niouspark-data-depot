@@ -491,93 +491,86 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
 
             {/* Admin Datamart Purchase Section */}
             {isAdmin && showDatamartPurchase && (
-              <div className="space-y-3 p-4 border rounded-lg bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
-                <div className="flex items-center gap-2">
-                  <Wallet className="w-5 h-5 text-green-600" />
-                  <Label className="font-semibold text-green-600">Admin Datamart Wallet</Label>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <AlertCircle className="w-4 h-4" />
-                    <span>Purchase directly from Datamart wallet balance</span>
+              <div className="rounded-lg border border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-teal-50/50 p-4 dark:from-emerald-950/20 dark:to-teal-950/20 dark:border-emerald-900/50">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-emerald-100 p-2 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-400">
+                    <Wallet className="w-5 h-5" />
                   </div>
-
-                  <div className="text-xs text-muted-foreground">
-                    <p>• No Paystack redirect required</p>
-                    <p>• Instant bundle activation</p>
-                    <p>• Direct Datamart API integration</p>
+                  <div className="flex-1 space-y-1">
+                    <h4 className="font-semibold text-sm text-emerald-900 dark:text-emerald-100">Admin Wallet Purchase</h4>
+                    <p className="text-xs text-emerald-700/80 dark:text-emerald-300/80 leading-relaxed">
+                      Funds will be deducted directly from your Datamart wallet balance. Instant processing.
+                    </p>
                   </div>
                 </div>
               </div>
             )}
 
-
-            <div className="grid gap-4 py-4">
+            <div className="py-4 space-y-5">
               {isAdmin ? (
-                // Admin View: Simple phone input for destination
+                // PREMIUM ADMIN VIEW
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Destination Phone Number</Label>
-                    <div className="flex gap-2">
-                      {/* Re-use saved numbers logic for admins or simple input */}
-                      {loadingNumbers ? <Loader2 className="animate-spin" /> : (
-                        <div className="w-full space-y-2">
-                          <Input
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                            placeholder="Enter recipient number (+233...)"
-                          />
-                          <div className="text-xs text-muted-foreground flex gap-2">
-                            <span className="cursor-pointer hover:underline" onClick={() => setPhone(user?.phoneNumber || "+233")}>Use my number</span>
-                            <span>|</span>
-                            <span className="cursor-pointer hover:underline" onClick={() => setShowAddNumber(true)}>Save new</span>
-                          </div>
-                        </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-sm font-medium">Recipient Number</Label>
+                      {savedNumbers.length > 0 && (
+                        <Select onValueChange={setPhone}>
+                          <SelectTrigger className="h-7 w-[140px] text-xs border-dashed">
+                            <SelectValue placeholder="Quick Pick" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {savedNumbers.map(num => (
+                              <SelectItem key={num.number} value={num.number} className="text-xs">
+                                {num.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       )}
+                    </div>
+
+                    <div className="relative group">
+                      <Input
+                        className="h-12 text-lg font-mono tracking-wide pl-4 shadow-sm transition-all focus-visible:ring-emerald-500/30"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+233..."
+                      />
+                      {/* Shortcuts inside input area or below */}
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                        onClick={() => setPhone(user?.phoneNumber || "+233")}
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-primary/40" /> Use my number
+                      </button>
+
+                      <button
+                        type="button"
+                        className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                        onClick={() => setShowAddNumber(!showAddNumber)}
+                      >
+                        <UserPlus className="w-3 h-3" /> {showAddNumber ? 'Cancel Save' : 'Save New Contact'}
+                      </button>
                     </div>
                   </div>
 
-                  {/* Saved numbers dropdown for quick pick */}
-                  {savedNumbers.length > 0 && (
-                    <div className="space-y-2">
-                      <Label className="text-xs text-muted-foreground">Quick Pick</Label>
-                      <Select onValueChange={setPhone}>
-                        <SelectTrigger className="h-8">
-                          <SelectValue placeholder="Select saved contact" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {savedNumbers.map(num => (
-                            <SelectItem key={num.number} value={num.number}>{num.name} - {num.number}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  {/* Add Number Form (Reused) */}
+                  {/* Add Number Form (Slide/Fade in) */}
                   {showAddNumber && (
-                    <div className="space-y-3 p-3 border rounded-md bg-muted/20">
-                      <Label className="font-semibold text-xs">Save Contact</Label>
-                      <Input
-                        className="h-8"
-                        type="text"
-                        placeholder="Name (e.g., Mom)"
-                        value={newNumberName}
-                        onChange={(e) => setNewNumberName(e.target.value)}
-                      />
-                      <Input
-                        className="h-8"
-                        type="tel"
-                        placeholder="+233..."
-                        value={newNumber}
-                        onChange={(e) => setNewNumber(e.target.value)}
-                      />
-                      <div className="flex gap-2">
-                        <Button size="sm" onClick={handleAddNumber} disabled={isAddingNumber} className="w-full">
-                          {isAddingNumber && <Loader2 className="animate-spin mr-2" />} Save
+                    <div className="p-3 border rounded-lg bg-muted/30 animate-in fade-in slide-in-from-top-2">
+                      <div className="grid grid-cols-3 gap-2">
+                        <Input
+                          className="col-span-2 h-8 text-sm"
+                          placeholder="Contact Name (e.g. Mom)"
+                          value={newNumberName}
+                          onChange={(e) => setNewNumberName(e.target.value)}
+                        />
+                        <Button size="sm" onClick={handleAddNumber} disabled={isAddingNumber} className="h-8">
+                          {isAddingNumber ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => setShowAddNumber(false)} className="w-full">Cancel</Button>
                       </div>
                     </div>
                   )}
@@ -661,23 +654,18 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
             </div>
 
             <DialogFooter className="flex-col gap-2">
-              {/* Debug Info */}
-              {process.env.NODE_ENV === 'development' && (
-                <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
-                  Debug: isAdmin={isAdmin.toString()}, showDatamartPurchase={showDatamartPurchase.toString()}
-                </div>
-              )}
+
 
               {/* Admin Datamart Purchase Button */}
               {isAdmin && showDatamartPurchase && (
                 <Button
                   onClick={handleDatamartPurchase}
                   disabled={loading}
-                  className="w-full bg-green-600 hover:bg-green-700"
+                  className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-md transition-all text-white font-semibold h-11"
                 >
                   {loading && <Loader2 className="animate-spin mr-2" />}
                   <Wallet className="mr-2 h-4 w-4" />
-                  Purchase with Datamart Wallet (GH₵{bundle.price.toFixed(2)})
+                  Purchase with Wallet (GH₵{bundle.price.toFixed(2)})
                 </Button>
               )}
 

@@ -1,235 +1,211 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Cpu, ShieldCheck, Wifi, Wand2, FileText, Zap, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { CheckCircle, ShieldCheck, Zap, ArrowRight, Smartphone, Clock, Award } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
 
 export default function Home() {
-  const mainServices = [
+  const networks = [
     {
-      icon: <Wifi className="h-16 w-16 text-blue-600" />,
-      title: 'Data Bundles',
-      subtitle: 'Stay Connected',
-      description: 'Purchase affordable data bundles for all major networks in Ghana. Fast, reliable, and instant delivery.',
-      features: ['Multiple Networks', 'Instant Delivery', 'Secure Payment'],
-      buttonText: 'Browse Bundles',
-      buttonHref: '/bundles',
-      gradient: 'from-blue-500 to-cyan-500'
+      id: 'mtn',
+      name: 'MTN',
+      color: 'bg-[#FFCC00]',
+      textColor: 'text-black',
+      description: 'Non-Expiry Data',
+      href: '/bundles/mtn',
+      price: 'Low Rates'
     },
     {
-      icon: <Wand2 className="h-16 w-16 text-purple-600" />,
-      title: 'AI Paraphraser',
-      subtitle: 'Transform Your Text',
-      description: 'Advanced AI-powered text paraphrasing and humanization. Perfect for students, writers, and professionals.',
-      features: ['PDF/DOCX Support', 'Multiple Modes', 'Human-like Output'],
-      buttonText: 'Try AI Paraphraser',
-      buttonHref: '/paraphraser',
-      gradient: 'from-purple-500 to-pink-500'
+      id: 'telecel',
+      name: 'Telecel',
+      color: 'bg-[#E30613]',
+      textColor: 'text-white',
+      description: 'Super Bundles',
+      href: '/bundles/telecel',
+      price: 'Best Value'
+    },
+    {
+      id: 'at',
+      name: 'AirtelTigo',
+      color: 'bg-[#005CA8]',
+      textColor: 'text-white',
+      description: 'Big Time Data',
+      href: '/bundles/airteltigo',
+      price: 'Mega Deals'
     }
   ];
 
-  const features = [
-    {
-      icon: <Zap className="h-10 w-10 text-primary" />,
-      title: 'Lightning Fast',
-      description: 'Get instant results whether you\'re buying data or paraphrasing text.',
-    },
-    {
-      icon: <ShieldCheck className="h-10 w-10 text-primary" />,
-      title: 'Secure & Private',
-      description: 'Your data and documents are processed securely with complete privacy.',
-    },
-    {
-      icon: <Cpu className="h-10 w-10 text-primary" />,
-      title: 'AI-Powered',
-      description: 'Leverage cutting-edge AI technology for smarter predictions and better results.',
-    },
-  ];
-
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col min-h-screen">
       <main className="flex-1">
         {/* Hero Section */}
-        <section className="relative w-full h-[70vh] md:h-[90vh] flex items-center justify-center text-center overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/30 via-purple-600/30 to-pink-600/30 z-10"></div>
-          <video
-            src="https://cdn.pixabay.com/video/2022/06/04/119290-717347154_tiny.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute z-0 w-auto min-w-full min-h-full max-w-none object-cover"
-          ></video>
-          <div className="container mx-auto px-4 md:px-6 relative z-10 text-white">
-            <div className="max-w-4xl mx-auto">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-extrabold font-headline tracking-tight mb-6">
-                Your All-in-One Digital Platform
+        <section className="relative w-full min-h-[85vh] flex items-center justify-center overflow-hidden bg-slate-950">
+
+          {/* Background Effects */}
+          <div className="absolute inset-0 z-0">
+            <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px]" />
+            <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px]" />
+            <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
+          </div>
+
+          <div className="container relative z-10 px-4 md:px-6 flex flex-col items-center gap-12 pt-20">
+
+            {/* Main Headline */}
+            <div className="text-center max-w-3xl space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400 py-1 px-4 mb-4 backdrop-blur-sm bg-emerald-950/30">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse" />
+                System Online • Instant Delivery
+              </Badge>
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold font-headline tracking-tight text-white">
+                Internet Data at <br />
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
+                  Unbeatable Prices
+                </span>
               </h1>
-              <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
-                Stay connected with affordable data bundles and transform your text with AI-powered paraphrasing.
+              <p className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
+                Connect instantly with Ghana's most reliable data plug.
+                Experience <span className="text-white font-medium">non-expiry bundles</span> delivered to your phone in seconds.
               </p>
-              <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
-                <Button asChild size="lg" className="font-bold text-lg px-8 py-3">
-                  <Link href="/bundles">
-                    <Wifi className="mr-2 h-5 w-5" />
-                    Data Bundles
-                  </Link>
-                </Button>
-                <Button asChild size="lg" variant="secondary" className="font-bold text-lg px-8 py-3 text-primary">
-                  <Link href="/paraphraser">
-                    <Wand2 className="mr-2 h-5 w-5" />
-                    AI Paraphraser
-                  </Link>
-                </Button>
+            </div>
+
+            {/* Quick Buy Widget */}
+            <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-200">
+              {networks.map((net) => (
+                <Link key={net.id} href={net.href} className="group">
+                  <div className="relative overflow-hidden rounded-2xl bg-slate-900/50 border border-slate-800 p-6 hover:border-emerald-500/50 transition-all duration-300 hover:shadow-2xl hover:shadow-emerald-900/20 hover:-translate-y-1">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className={`h-12 w-12 rounded-xl flex items-center justify-center font-bold text-lg shadow-lg ${net.color} ${net.textColor}`}>
+                        {net.name[0]}
+                      </div>
+                      <Badge variant="secondary" className="bg-slate-800 text-slate-300 group-hover:bg-emerald-500/20 group-hover:text-emerald-400 transition-colors">
+                        {net.price}
+                      </Badge>
+                    </div>
+                    <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-emerald-400 transition-colors">{net.name}</h3>
+                    <p className="text-slate-400">{net.description}</p>
+                    <div className="mt-6 flex items-center text-sm font-medium text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-[-10px] group-hover:translate-x-0">
+                      Buy Now <ArrowRight className="ml-1 w-4 h-4" />
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Trust Badges */}
+            <div className="flex flex-wrap justify-center gap-8 mt-8 text-slate-500 text-sm font-medium animate-in fade-in duration-1000 delay-500">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-emerald-500" /> Secure Payments
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="w-5 h-5 text-yellow-500" /> Instant Delivery
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-500" /> 24/7 Support
               </div>
             </div>
+
           </div>
         </section>
 
-        {/* Main Services Section */}
-        <section className="w-full py-20 md:py-32 bg-gradient-to-br from-gray-50 to-gray-100">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold font-headline mb-4">
-                Choose Your Service
-              </h2>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-                Whether you need to stay connected or transform your text, we've got you covered.
-              </p>
-            </div>
-            <div className="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-              {mainServices.map((service, index) => (
-                <Card key={index} className="group relative overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${service.gradient} opacity-5 group-hover:opacity-10 transition-opacity duration-300`}></div>
-                  <CardContent className="p-8 md:p-12">
-                    <div className="flex flex-col items-center text-center space-y-6">
-                      <div className="bg-white rounded-full p-6 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                        {service.icon}
+
+        {/* Value Proposition */}
+        <section className="py-24 bg-white dark:bg-slate-950">
+          <div className="container px-4 md:px-6">
+            <div className="grid md:grid-cols-2 gap-16 items-center">
+              <div className="space-y-6">
+                <h2 className="text-3xl md:text-5xl font-bold font-headline text-slate-900 dark:text-white">
+                  Why top Ghanaians choose <span className="text-emerald-600">Niouspark?</span>
+                </h2>
+                <p className="text-lg text-slate-600 dark:text-slate-300">
+                  We've simplified the process of staying connected. No complex codes, no hidden fees—just reliable data delivered straight to your wallet.
+                </p>
+
+                <div className="space-y-4 pt-4">
+                  {[
+                    { title: 'Zero Transaction Fees', desc: 'Pay exactly what you see. We absorb the processing costs.' },
+                    { title: 'Non-Expiry Data', desc: 'Your data lasts as long as you need it. No monthly pressure.' },
+                    { title: 'Dedicated Support', desc: 'Our team is always online to assist with any delivery issues.' }
+                  ].map((item, i) => (
+                    <div key={i} className="flex gap-4">
+                      <div className="mt-1 h-6 w-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center flex-shrink-0">
+                        <CheckCircle className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                          {service.subtitle}
-                        </p>
-                        <h3 className="text-3xl md:text-4xl font-bold font-headline mb-4">
-                          {service.title}
-                        </h3>
-                        <p className="text-lg text-muted-foreground mb-6 max-w-md">
-                          {service.description}
-                        </p>
+                        <h4 className="font-bold text-slate-900 dark:text-white">{item.title}</h4>
+                        <p className="text-slate-500 dark:text-slate-400">{item.desc}</p>
                       </div>
-                      <div className="flex flex-wrap justify-center gap-2 mb-6">
-                        {service.features.map((feature, idx) => (
-                          <span key={idx} className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium">
-                            {feature}
-                          </span>
-                        ))}
-                      </div>
-                      <Button asChild size="lg" className="font-bold group-hover:scale-105 transition-transform duration-300">
-                        <Link href={service.buttonHref}>
-                          {service.buttonText}
-                          <ArrowRight className="ml-2 h-5 w-5" />
-                        </Link>
-                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
+                  ))}
+                </div>
 
-        {/* Features Section */}
-        <section id="features" className="w-full py-16 md:py-24 bg-background">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="text-center">
-              <h2 className="text-3xl md:text-4xl font-bold font-headline">
-                Why Choose Us?
-              </h2>
-              <p className="mt-4 max-w-2xl mx-auto text-lg text-muted-foreground">
-                We provide the best data bundle services with reliability and at an affordable price.
-              </p>
-            </div>
-            <div className="mt-12 grid gap-8 md:grid-cols-3">
-              {features.map((feature, index) => (
-                <Card key={index} className="text-center shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
-                  <CardHeader>
-                    <div className="mx-auto bg-primary/10 rounded-full h-20 w-20 flex items-center justify-center">
-                      {feature.icon}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <h3 className="text-xl font-bold font-headline">{feature.title}</h3>
-                    <p className="mt-2 text-muted-foreground">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* How it Works Section */}
-        <section className="w-full py-16 md:py-24 bg-card">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold font-headline">
-                  Get Your Data in 3 Simple Steps
-                </h2>
-                <p className="mt-4 text-lg text-muted-foreground">
-                  Purchasing data has never been this easy. Follow our simple process to get connected in minutes.
-                </p>
-                <ul className="mt-6 space-y-4">
-                  <li className="flex items-start">
-                    <CheckCircle className="h-6 w-6 text-primary mr-3 mt-1 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-bold font-headline">1. Select Your Bundle</h3>
-                      <p className="text-muted-foreground">Browse our diverse range of data bundles and pick the one that fits your lifestyle.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-6 w-6 text-primary mr-3 mt-1 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-bold font-headline">2. Provide Phone Number</h3>
-                      <p className="text-muted-foreground">Enter the phone number you want to top up. You can purchase for yourself or a friend.</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start">
-                    <CheckCircle className="h-6 w-6 text-primary mr-3 mt-1 flex-shrink-0" />
-                    <div>
-                      <h3 className="font-bold font-headline">3. Secure Payment</h3>
-                      <p className="text-muted-foreground">Complete the purchase through our secure payment gateway and receive your data instantly.</p>
-                    </div>
-                  </li>
-                </ul>
+                <Button asChild size="lg" className="mt-6 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                  <Link href="/bundles">Start Buying Now</Link>
+                </Button>
               </div>
-              <div className="flex justify-center">
-                <Image
-                  src="/3 Steps.png"
-                  alt="Mobile app illustration"
-                  width={500}
-                  height={500}
-                  className="rounded-lg shadow-2xl"
-                  data-ai-hint="mobile phone"
-                />
+
+              <div className="relative">
+                <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-2xl opacity-20 blur-xl animate-pulse" />
+                <div className="relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl bg-slate-50/50 dark:bg-slate-900/50 backdrop-blur-xl p-8">
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
+                      <div>
+                        <p className="text-sm text-slate-500">Recent Transaction</p>
+                        <p className="font-bold text-lg dark:text-white">MTN 10GB Bundle</p>
+                      </div>
+                      <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900 dark:text-emerald-300">Success</Badge>
+                    </div>
+                    <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
+                      <div>
+                        <p className="text-sm text-slate-500">Time</p>
+                        <p className="font-medium dark:text-white">Just now</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-slate-500">Amount</p>
+                        <p className="font-bold text-slate-900 dark:text-white">GH₵ 45.00</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                      <Award className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <p className="text-sm text-blue-800 dark:text-blue-200">You saved <span className="font-bold">GH₵ 15.00</span> compared to direct network purchase.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="w-full py-20 bg-primary text-primary-foreground">
-          <div className="container mx-auto px-4 md:px-6 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold font-headline">Ready to Get Started?</h2>
-            <p className="mt-4 max-w-2xl mx-auto text-lg opacity-90">
-              Join thousands of satisfied customers and enjoy uninterrupted internet access. Explore our bundles now!
-            </p>
-            <div className="mt-8">
-              <Button asChild size="lg" variant="secondary" className="font-bold text-primary">
-                <Link href="/bundles">Explore Data Bundles</Link>
-              </Button>
+        {/* Tools Teaser (Secondary) */}
+        <section className="py-20 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800">
+          <div className="container px-4 md:px-6 text-center">
+            <h3 className="text-2xl font-bold font-headline mb-4">More than just data</h3>
+            <p className="text-slate-500 max-w-2xl mx-auto mb-12">Explore our suite of AI-powered tools designed to boost your productivity.</p>
+
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link href="/paraphraser" className="group flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-blue-500 transition-all shadow-sm">
+                <div className="h-10 w-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600">
+                  <Award className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-sm">AI Paraphraser</p>
+                  <p className="text-xs text-slate-500">Humanize AI Text</p>
+                </div>
+              </Link>
+
+              <Link href="/chat" className="group flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-purple-500 transition-all shadow-sm">
+                <div className="h-10 w-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600">
+                  <Smartphone className="w-5 h-5" />
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-sm">AI Assistant</p>
+                  <p className="text-xs text-slate-500">Chat & Voice Support</p>
+                </div>
+              </Link>
             </div>
           </div>
         </section>
+
       </main>
     </div>
   );
