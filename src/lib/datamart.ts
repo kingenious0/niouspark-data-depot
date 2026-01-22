@@ -28,13 +28,13 @@ type NewDatamartBundlesResponse = {
 }
 
 export type TransactionStatus =
-  | 'completed'
-  | 'pending'
-  | 'failed'
-  | 'abandoned'
-  | 'success'
-  | 'delivering'
-  | 'delivery_failed';
+    | 'completed'
+    | 'pending'
+    | 'failed'
+    | 'abandoned'
+    | 'success'
+    | 'delivering'
+    | 'delivery_failed';
 
 
 export type Transaction = {
@@ -87,7 +87,7 @@ export async function fetchBundles(network: 'TELECEL' | 'YELLO' | 'AT_PREMIUM'):
     try {
         const apiKey = getApiKey();
         if (!apiKey) return [];
-        
+
         // The new API returns all networks in one call, no network query parameter needed
         const response = await fetchWithTimeout(`${DATAMART_BASE_URL}/data-packages`, {
             headers: {
@@ -107,20 +107,29 @@ export async function fetchBundles(network: 'TELECEL' | 'YELLO' | 'AT_PREMIUM'):
         if (result.status === 'success') {
             // Extract the specific network's bundles from the response
             const networkBundles = result.data[network] || [];
-            
+
             // Ensure all bundles have the correct network field set and handle availability
             return networkBundles.map(bundle => {
                 let isAvailable = true;
-                
-                // Mark specific Telecel bundles as unavailable
+                let finalPrice = bundle.price;
+
+                // Pricing and availability logic
                 if (network === 'TELECEL') {
-                    if (bundle.capacity === '5' || bundle.capacity === '8') {
-                        isAvailable = false;
+                    // Make all Telecel bundles unavailable as per requirement
+                    isAvailable = false;
+                } else if (network === 'YELLO') {
+                    // Add 0.70 markup to MTN bundles
+                    // Parse, add markup, and fix to 2 decimals
+                    const originalPrice = parseFloat(bundle.price);
+                    if (!isNaN(originalPrice)) {
+                        finalPrice = (originalPrice + 0.70).toFixed(2);
                     }
                 }
-                
+                // AT_PREMIUM (AirtelTigo) remains as is (DataMart price)
+
                 return {
                     ...bundle,
+                    price: finalPrice,
                     network: network,
                     available: isAvailable
                 };
@@ -146,7 +155,7 @@ export async function fetchUserTransactions(userId: string): Promise<Transaction
 
     try {
         const q = query(
-            collection(db, "transactions"), 
+            collection(db, "transactions"),
             where("userId", "==", userId),
             orderBy("createdAt", "desc")
         );
@@ -166,11 +175,11 @@ export async function fetchUserTransactions(userId: string): Promise<Transaction
                 type: 'purchase',
                 userId: data.userId,
                 bundleName: data.bundleName,
-                phoneNumber: data.phone, // Use phone field
+                phoneNumber: data.phoneNumber || data.phone, // Check both possibilities
                 network: data.network,
             });
         });
-        
+
         return transactions;
 
     } catch (error) {
@@ -212,7 +221,7 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
                 capacity: `${capacity}GB`,
             }),
         });
-        
+
         const result = await response.json();
 
         if (!response.ok || result.status !== 'success') {
@@ -226,7 +235,7 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
 
     } catch (error) {
         if ((error as Error).name === 'AbortError') {
-             throw new Error("The request to the data provider timed out. Please check your transaction history later.");
+            throw new Error("The request to the data provider timed out. Please check your transaction history later.");
         }
         // Re-throw other errors to be caught by the webhook logic
         throw error;
@@ -262,9 +271,9 @@ export async function fetchWalletBalance(): Promise<number | null> {
         return parseFloat(result.data.balance);
     } catch (error) {
         if ((error as Error).name === 'AbortError') {
-             console.error('Request to fetch wallet balance timed out.');
+            console.error('Request to fetch wallet balance timed out.');
         } else {
-             console.error('An error occurred while fetching wallet balance:', error);
+            console.error('An error occurred while fetching wallet balance:', error);
         }
         return null; // Return null on any error to allow graceful UI fallback
     }

@@ -46,46 +46,46 @@ export default function AdminDashboardPage() {
     if (!auth.currentUser) return;
 
     const fetchData = async () => {
-        try {
-            setLoading(true);
-            // Use auth.currentUser which is the full Firebase user object with all methods.
-            const idToken = await auth.currentUser.getIdToken();
-            
-            // Fetch transactions and balance in parallel
-            const [transactionsRes, balanceRes] = await Promise.all([
-                fetch('/api/admin/get-transactions', { headers: { 'Authorization': `Bearer ${idToken}` } }),
-                fetch('/api/admin/get-balance', { headers: { 'Authorization': `Bearer ${idToken}` } })
-            ]);
+      try {
+        setLoading(true);
+        // Use auth.currentUser which is the full Firebase user object with all methods.
+        const idToken = await auth.currentUser.getIdToken();
 
-            // Process transactions
-            const transactionsData = await transactionsRes.json();
-            if (transactionsRes.ok && transactionsData.success) {
-                setAllOrders(transactionsData.transactions);
-            } else {
-                throw new Error(transactionsData.error || 'Failed to fetch transactions');
-            }
+        // Fetch transactions and balance in parallel
+        const [transactionsRes, balanceRes] = await Promise.all([
+          fetch('/api/admin/get-transactions', { headers: { 'Authorization': `Bearer ${idToken}` } }),
+          fetch('/api/admin/get-balance', { headers: { 'Authorization': `Bearer ${idToken}` } })
+        ]);
 
-            // Process balance
-            const balanceData = await balanceRes.json();
-            if (balanceRes.ok && balanceData.success) {
-                setWalletBalance(balanceData.balance);
-            } else {
-                 toast({
-                    title: 'Could not fetch balance',
-                    description: balanceData.error || 'Failed to fetch wallet balance.',
-                    variant: 'destructive',
-                });
-            }
-
-        } catch (error: any) {
-            toast({
-                title: 'Error fetching data',
-                description: error.message,
-                variant: 'destructive',
-            });
-        } finally {
-            setLoading(false);
+        // Process transactions
+        const transactionsData = await transactionsRes.json();
+        if (transactionsRes.ok && transactionsData.success) {
+          setAllOrders(transactionsData.transactions);
+        } else {
+          throw new Error(transactionsData.error || 'Failed to fetch transactions');
         }
+
+        // Process balance
+        const balanceData = await balanceRes.json();
+        if (balanceRes.ok && balanceData.success) {
+          setWalletBalance(balanceData.balance);
+        } else {
+          toast({
+            title: 'Could not fetch balance',
+            description: balanceData.error || 'Failed to fetch wallet balance.',
+            variant: 'destructive',
+          });
+        }
+
+      } catch (error: any) {
+        toast({
+          title: 'Error fetching data',
+          description: error.message,
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
     }
     fetchData();
   }, [user, toast]);
@@ -139,133 +139,139 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex-1 flex flex-col p-4 sm:p-6 lg:p-8">
-       <div className="flex flex-wrap justify-between items-center mb-8 gap-4">
+      <div className="flex flex-wrap justify-between items-center mb-8 gap-4">
         <h1 className="text-3xl font-bold font-headline">Admin Dashboard</h1>
         <div className="flex gap-2 items-center flex-wrap">
-            <Button asChild>
-                <Link href="/bundles">
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Purchase Bundle
-                </Link>
-            </Button>
-            <Button asChild variant="outline">
-                <Link href="/admin/ai">
-                    <Cpu className="mr-2 h-4 w-4" />
-                    AI Suite
-                </Link>
-            </Button>
-            <Button asChild variant="outline">
-                <Link href="/admin/users">
-                    <Users className="mr-2 h-4 w-4" />
-                    Manage Users
-                </Link>
-            </Button>
-            <Button asChild variant="outline">
-                <Link href="/admin/paraphraser">
-                    <Wand2 className="mr-2 h-4 w-4" />
-                    Paraphraser Analytics
-                </Link>
-            </Button>
-             {isSuperAdmin && (
-                <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Clear All Transactions
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This action cannot be undone. This will permanently delete all
-                        transaction history from the database.
-                    </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleDeleteTransactions} disabled={isDeleting}>
-                        {isDeleting && <Loader2 className="animate-spin mr-2"/>}
-                        Yes, delete everything
-                    </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-                </AlertDialog>
-             )}
+          <Button asChild>
+            <Link href="/bundles">
+              <ShoppingCart className="mr-2 h-4 w-4" />
+              Purchase Bundle
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/ai">
+              <Cpu className="mr-2 h-4 w-4" />
+              AI Suite
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/users">
+              <Users className="mr-2 h-4 w-4" />
+              Manage Users
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/admin/paraphraser">
+              <Wand2 className="mr-2 h-4 w-4" />
+              Paraphraser Analytics
+            </Link>
+          </Button>
+          <Button asChild variant="default" className="bg-blue-600 hover:bg-blue-700">
+            <Link href="/admin/bundles">
+              <Package className="mr-2 h-4 w-4" />
+              Manage Bundles
+            </Link>
+          </Button>
+          {isSuperAdmin && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive">
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Clear All Transactions
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action cannot be undone. This will permanently delete all
+                    transaction history from the database.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDeleteTransactions} disabled={isDeleting}>
+                    {isDeleting && <Loader2 className="animate-spin mr-2" />}
+                    Yes, delete everything
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </div>
-       {loading ? <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> <p className="mt-2 text-muted-foreground">Loading dashboard data...</p></div> : (
+      {loading ? <div className="text-center p-10"><Loader2 className="h-8 w-8 animate-spin mx-auto" /> <p className="mt-2 text-muted-foreground">Loading dashboard data...</p></div> : (
         <>
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-        {walletBalance !== null ? (
-            <DashboardCard
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {walletBalance !== null ? (
+              <DashboardCard
                 title="DataMart Wallet Balance"
                 value={walletBalance}
                 icon={<Wallet className="text-primary" />}
                 description="Live balance"
-            />
-        ) : (
-             <DashboardCard
+              />
+            ) : (
+              <DashboardCard
                 title="DataMart Wallet Balance"
                 value="Unavailable"
                 icon={<Wallet className="text-destructive" />}
                 description="Could not fetch balance"
+              />
+            )}
+            <SalesCard value={totalSales} />
+            <AovCard value={aov} />
+            <DashboardCard
+              title="Total Customers"
+              value={totalCustomers.toString()}
+              icon={<Users className="text-primary" />}
+              change="+12.5%"
+              changeType="increase"
+              description="from last month"
             />
-        )}
-        <SalesCard value={totalSales} />
-        <AovCard value={aov} />
-         <DashboardCard
-            title="Total Customers"
-            value={totalCustomers.toString()}
-            icon={<Users className="text-primary" />}
-            change="+12.5%"
-            changeType="increase"
-            description="from last month"
-          />
-          <DashboardCard
-            title="Completed Orders"
-            value={totalCompletedOrders.toString()}
-            icon={<Package className="text-primary" />}
-            change="+8.1%"
-            changeType="increase"
-            description="from last month"
-          />
-           <DashboardCard
-            title="Pending Payments"
-            value={pendingOrders.length.toString()}
-            icon={<CreditCard className="text-primary" />}
-          />
-           <DashboardCard
-            title="Failed Payments"
-            value={failedOrders.length.toString()}
-            icon={<CreditCard className="text-destructive" />}
-          />
-      </div>
-      <div className="grid gap-6 mt-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-            <Card>
-            <CardHeader>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>A list of the most recent transactions.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <OrderHistory 
-                  orders={recentOrders} 
-                  isSuperAdmin={isSuperAdmin}
-                  onTransactionDeleted={(transactionId) => {
-                    // Remove the deleted transaction from state
-                    setAllOrders(prev => prev.filter(order => order._id !== transactionId));
-                  }}
-                />
-            </CardContent>
-            </Card>
-        </div>
-        <div className="lg:col-span-2 space-y-6">
-            <BestSellersCard />
-            <CancellationsCard orders={allOrders} />
-        </div>
-      </div>
-      </>
+            <DashboardCard
+              title="Completed Orders"
+              value={totalCompletedOrders.toString()}
+              icon={<Package className="text-primary" />}
+              change="+8.1%"
+              changeType="increase"
+              description="from last month"
+            />
+            <DashboardCard
+              title="Pending Payments"
+              value={pendingOrders.length.toString()}
+              icon={<CreditCard className="text-primary" />}
+            />
+            <DashboardCard
+              title="Failed Payments"
+              value={failedOrders.length.toString()}
+              icon={<CreditCard className="text-destructive" />}
+            />
+          </div>
+          <div className="grid gap-6 mt-6 lg:grid-cols-5">
+            <div className="lg:col-span-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Orders</CardTitle>
+                  <CardDescription>A list of the most recent transactions.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <OrderHistory
+                    orders={recentOrders}
+                    isSuperAdmin={isSuperAdmin}
+                    onTransactionDeleted={(transactionId) => {
+                      // Remove the deleted transaction from state
+                      setAllOrders(prev => prev.filter(order => order._id !== transactionId));
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+            <div className="lg:col-span-2 space-y-6">
+              <BestSellersCard orders={allOrders} />
+              <CancellationsCard orders={allOrders} />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

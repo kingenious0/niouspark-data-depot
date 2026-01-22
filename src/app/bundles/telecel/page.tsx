@@ -1,30 +1,8 @@
 import BundleCard from "@/components/bundle-card";
-import { fetchBundles, DatamartBundle } from "@/lib/datamart";
-
-const telecelCustomPrices: { [key: string]: string } = {
-  "5": "23.80",
-  "8": "37.00",
-  "10": "42.00",
-  "12": "46.00",
-  "15": "61.50",
-  "20": "80.00",
-  "25": "97.00",
-  "30": "118.00",
-  "40": "156.00",
-  "50": "196.00"
-};
+import { getBundlesWithSettings } from "@/lib/bundles-server";
 
 export default async function TelecelBundlesPage() {
-  const bundlesFromApi = await fetchBundles('TELECEL');
-
-  const bundles = bundlesFromApi.map((bundle: DatamartBundle) => {
-    const capacityKey = bundle.capacity;
-    const customPrice = telecelCustomPrices[capacityKey];
-    return {
-      ...bundle,
-      price: customPrice ? customPrice : bundle.price, // Use custom price if it exists
-    };
-  });
+  const bundles = await getBundlesWithSettings('TELECEL');
 
   return (
     <div className="bg-background">
@@ -40,12 +18,14 @@ export default async function TelecelBundlesPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {bundles.map((bundle) => (
             <BundleCard key={bundle.capacity} bundle={{
-                id: `TELECEL-${bundle.capacity}`,
-                name: `${bundle.capacity}GB Bundle`,
-                data: `${bundle.mb} MB`,
-                price: parseFloat(bundle.price),
-                validity: 'Non-Expiry',
-                available: bundle.available // Pass through the availability status from datamart
+              id: bundle.id,
+              name: bundle.name || `${bundle.capacity}GB Bundle`,
+              data: `${bundle.mb} MB`,
+              price: parseFloat(bundle.price),
+              validity: 'Non-Expiry',
+              available: bundle.available,
+              capacity: bundle.capacity,
+              network: bundle.network
             }} />
           ))}
         </div>

@@ -2,7 +2,7 @@ import admin from 'firebase-admin';
 import type { AdminTransaction } from './datamart';
 
 if (!process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-  throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not set. Go to your Firebase Project settings > Service accounts. Generate a new private key, then encode it to Base64. (e.g. using a site like base64encode.org) and add it to your .env file.');
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY is not set. Go to your Firebase Project settings > Service accounts. Generate a new private key, then encode it to Base64. (e.g. using a site like base64encode.org) and add it to your .env file.');
 }
 
 if (!admin.apps.length) {
@@ -24,7 +24,7 @@ const adminAuth = admin.auth();
 export async function fetchAllTransactionsFromAdmin(): Promise<AdminTransaction[]> {
     try {
         const snapshot = await adminDb.collection("transactions").orderBy("createdAt", "desc").get();
-        
+
         if (snapshot.empty) {
             return [];
         }
@@ -39,9 +39,9 @@ export async function fetchAllTransactionsFromAdmin(): Promise<AdminTransaction[
             }
             return Promise.resolve(null);
         });
-        
+
         const userResults = await Promise.all(userPromises);
-        
+
         const userMap = userResults.reduce((acc, user) => {
             if (user) {
                 acc[user.uid] = user;
@@ -56,13 +56,13 @@ export async function fetchAllTransactionsFromAdmin(): Promise<AdminTransaction[
 
             let createdAt = '';
             if (data.createdAt) {
-                if (data.createdAt.toDate) { 
+                if (data.createdAt.toDate) {
                     createdAt = data.createdAt.toDate().toISOString();
                 } else if (typeof data.createdAt === 'string') {
                     createdAt = data.createdAt;
                 }
             }
-            
+
             return {
                 _id: doc.id,
                 amount: data.amount,
@@ -72,7 +72,7 @@ export async function fetchAllTransactionsFromAdmin(): Promise<AdminTransaction[
                 type: data.type || 'purchase',
                 userId: data.userId,
                 bundleName: data.bundleName,
-                phoneNumber: data.phone, // Use phone field
+                phoneNumber: data.phoneNumber || data.phone, // Check both possibilities
                 network: data.network,
                 userName: user?.displayName || 'N/A',
                 email: user?.email || 'N/A',
@@ -89,18 +89,18 @@ export async function fetchAllTransactionsFromAdmin(): Promise<AdminTransaction[
 }
 
 export async function setUserRole(uid: string, role: 'admin' | 'customer'): Promise<void> {
-  try {
-    // Set the custom claim on the user
-    await adminAuth.setCustomUserClaims(uid, { role });
-    
-    // Also update the role in Firestore for consistency
-    await adminDb.collection('users').doc(uid).set({ role }, { merge: true });
-    
-    console.log(`Successfully set role '${role}' for user ${uid}`);
-  } catch (error) {
-    console.error(`Error setting user role for ${uid}:`, error);
-    throw new Error('Failed to set user role.');
-  }
+    try {
+        // Set the custom claim on the user
+        await adminAuth.setCustomUserClaims(uid, { role });
+
+        // Also update the role in Firestore for consistency
+        await adminDb.collection('users').doc(uid).set({ role }, { merge: true });
+
+        console.log(`Successfully set role '${role}' for user ${uid}`);
+    } catch (error) {
+        console.error(`Error setting user role for ${uid}:`, error);
+        throw new Error('Failed to set user role.');
+    }
 }
 
 export async function countAdmins(): Promise<number> {
@@ -133,11 +133,11 @@ export async function deleteTransaction(transactionId: string): Promise<void> {
     try {
         const transactionRef = adminDb.collection('transactions').doc(transactionId);
         const transactionDoc = await transactionRef.get();
-        
+
         if (!transactionDoc.exists) {
             throw new Error(`Transaction ${transactionId} not found`);
         }
-        
+
         await transactionRef.delete();
         console.log(`Successfully deleted transaction ${transactionId}`);
     } catch (error) {

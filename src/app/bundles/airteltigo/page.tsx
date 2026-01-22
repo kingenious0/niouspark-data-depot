@@ -1,8 +1,8 @@
 import BundleCard from "@/components/bundle-card";
-import { fetchBundles } from "@/lib/datamart";
+import { getBundlesWithSettings } from "@/lib/bundles-server";
 
 export default async function AirteltigoBundlesPage() {
-  const bundles = await fetchBundles("AT_PREMIUM");
+  const bundles = await getBundlesWithSettings("AT_PREMIUM");
 
   return (
     <div className="bg-background">
@@ -21,11 +21,14 @@ export default async function AirteltigoBundlesPage() {
             <BundleCard
               key={bundle.capacity}
               bundle={{
-                id: `AT_PREMIUM-${bundle.capacity}`,
-                name: `${bundle.capacity}GB Bundle`,
+                id: bundle.id,
+                name: bundle.name || `${bundle.capacity}GB Bundle`,
                 data: `${bundle.mb} MB`,
                 price: parseFloat(bundle.price),
                 validity: "Non-Expiry",
+                available: bundle.available,
+                capacity: bundle.capacity,
+                network: bundle.network
               }}
             />
           ))}

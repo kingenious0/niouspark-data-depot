@@ -71,7 +71,7 @@ export default function BundleCard({ bundle }: BundleCardProps) {
     if (bundle.available === false) {
       return;
     }
-    
+
     if (!user) {
       router.push('/login');
     } else {
@@ -81,21 +81,21 @@ export default function BundleCard({ bundle }: BundleCardProps) {
 
   if (isNaN(price)) {
     return (
-       <Card className="flex flex-col shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
-         <CardHeader>
-           <CardTitle className="font-headline text-2xl">{bundle.name}</CardTitle>
-           <CardDescription>{bundle.validity}</CardDescription>
-         </CardHeader>
-         <CardContent className="flex-grow space-y-2">
-           <p className="text-3xl font-bold text-destructive">
-             Price Unavailable
-           </p>
-           <p className="text-muted-foreground">{bundle.data}</p>
-         </CardContent>
-         <CardFooter>
-           <Button className="w-full font-bold" disabled>Purchase</Button>
-         </CardFooter>
-       </Card>
+      <Card className="flex flex-col shadow-lg hover:shadow-primary/20 transition-shadow duration-300">
+        <CardHeader>
+          <CardTitle className="font-headline text-2xl">{bundle.name}</CardTitle>
+          <CardDescription>{bundle.validity}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex-grow space-y-2">
+          <p className="text-3xl font-bold text-destructive">
+            Price Unavailable
+          </p>
+          <p className="text-muted-foreground">{bundle.data}</p>
+        </CardContent>
+        <CardFooter>
+          <Button className="w-full font-bold" disabled>Purchase</Button>
+        </CardFooter>
+      </Card>
     )
   }
 
@@ -131,34 +131,34 @@ export default function BundleCard({ bundle }: BundleCardProps) {
           )}
         </CardContent>
         <CardFooter>
-            <Button 
-              className="w-full font-bold" 
-              onClick={handlePurchaseClick} 
-              disabled={loading || isUnavailable}
-            >
-              {loading ? (
-                <Loader2 className="animate-spin" /> 
-              ) : isUnavailable ? (
-                'Unavailable'
-              ) : (
-                'Purchase'
-              )}
-            </Button>
+          <Button
+            className="w-full font-bold"
+            onClick={handlePurchaseClick}
+            disabled={loading || isUnavailable}
+          >
+            {loading ? (
+              <Loader2 className="animate-spin" />
+            ) : isUnavailable ? (
+              'Unavailable'
+            ) : (
+              'Purchase'
+            )}
+          </Button>
         </CardFooter>
       </Card>
-      
+
       <PurchaseDialog
         isOpen={purchaseDialogOpen}
         onOpenChange={setPurchaseDialogOpen}
-        bundle={{...bundle, price}}
+        bundle={{ ...bundle, price }}
       />
     </>
   );
 }
 
 interface SavedNumber {
-    name: string;
-    number: string;
+  name: string;
+  number: string;
 }
 
 interface PurchaseDialogProps {
@@ -191,8 +191,8 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
   useEffect(() => {
     if (user?.email) setEmail(user.email);
     if (isOpen && user) {
-        fetchSavedNumbers();
-        checkAdminStatus();
+      fetchSavedNumbers();
+      checkAdminStatus();
     }
   }, [user, isOpen]);
 
@@ -200,15 +200,15 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
     try {
       const idToken = await auth.currentUser?.getIdToken();
       console.log("🔍 Checking admin status for user:", user?.email);
-      
+
       const decodedToken = await fetch('/api/auth/verify-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ idToken })
       }).then(res => res.json());
-      
+
       console.log("🔍 Token verification result:", decodedToken);
-      
+
       if (decodedToken.success && decodedToken.data.role === 'admin') {
         console.log("✅ User is admin, enabling Datamart purchase");
         setIsAdmin(true);
@@ -228,76 +228,76 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
   const fetchSavedNumbers = async () => {
     setLoadingNumbers(true);
     try {
-        const idToken = await auth.currentUser?.getIdToken();
-        const res = await fetch('/api/user/saved-numbers', {
-            headers: { 'Authorization': `Bearer ${idToken}` }
-        });
-        const data = await res.json();
-        if (data.success) {
-            setSavedNumbers(data.numbers);
-            if(data.numbers.length === 0) {
-              setShowAddNumber(true); // If no numbers, show add form by default
-            } else {
-              setPhone(data.numbers[0].number); // Default to first saved number
-            }
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/user/saved-numbers', {
+        headers: { 'Authorization': `Bearer ${idToken}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSavedNumbers(data.numbers);
+        if (data.numbers.length === 0) {
+          setShowAddNumber(true); // If no numbers, show add form by default
+        } else {
+          setPhone(data.numbers[0].number); // Default to first saved number
         }
+      }
     } catch (error) {
-        console.error("Failed to fetch saved numbers:", error);
+      console.error("Failed to fetch saved numbers:", error);
     } finally {
-        setLoadingNumbers(false);
+      setLoadingNumbers(false);
     }
   }
 
   const handleAddNumber = async () => {
     if (!newNumberName || !newNumber) {
-        toast({ title: "Error", description: "Please provide a name and number.", variant: "destructive" });
-        return;
+      toast({ title: "Error", description: "Please provide a name and number.", variant: "destructive" });
+      return;
     }
     setIsAddingNumber(true);
     try {
-        const idToken = await auth.currentUser?.getIdToken();
-        const res = await fetch('/api/user/saved-numbers', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-            body: JSON.stringify({ name: newNumberName, number: newNumber }),
-        });
-        const data = await res.json();
-        if(data.success) {
-            toast({ title: "Success", description: "Number saved successfully."});
-            setSavedNumbers([...savedNumbers, data.number]);
-            setPhone(data.number.number); // Select the newly added number
-            setNewNumberName("");
-            setNewNumber("+233");
-            setShowAddNumber(false);
-        } else {
-            throw new Error(data.error || "Failed to save number.");
-        }
+      const idToken = await auth.currentUser?.getIdToken();
+      const res = await fetch('/api/user/saved-numbers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
+        body: JSON.stringify({ name: newNumberName, number: newNumber }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast({ title: "Success", description: "Number saved successfully." });
+        setSavedNumbers([...savedNumbers, data.number]);
+        setPhone(data.number.number); // Select the newly added number
+        setNewNumberName("");
+        setNewNumber("+233");
+        setShowAddNumber(false);
+      } else {
+        throw new Error(data.error || "Failed to save number.");
+      }
     } catch (error: any) {
-        toast({ title: "Error Saving Number", description: error.message, variant: "destructive" });
+      toast({ title: "Error Saving Number", description: error.message, variant: "destructive" });
     } finally {
-        setIsAddingNumber(false);
+      setIsAddingNumber(false);
     }
   }
 
   const handlePrimaryActionClick = () => {
     if (paymentChannel === "mobile_money") {
-        if (!phone.match(/^\+233[0-9]{9}$/)) {
-            toast({
-                title: "Invalid Phone Number",
-                description: "Please select or enter a valid Ghana phone number.",
-                variant: "destructive",
-            });
-            return;
-        }
-        setShowConfirmDialog(true);
+      if (!phone.match(/^\+233[0-9]{9}$/)) {
+        toast({
+          title: "Invalid Phone Number",
+          description: "Please select or enter a valid Ghana phone number.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setShowConfirmDialog(true);
     } else {
-        handlePurchase();
+      handlePurchase();
     }
   }
 
   const handleDatamartPurchase = async () => {
     setLoading(true);
-    
+
     // Double-check admin status before proceeding
     if (!isAdmin) {
       toast({
@@ -308,7 +308,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       setLoading(false);
       return;
     }
-    
+
     if (!phone.match(/^\+233[0-9]{9}$/)) {
       toast({
         title: "Invalid Phone Number",
@@ -348,7 +348,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
 
       const result = await res.json();
       console.log("🔄 Datamart purchase response:", result);
-      
+
       if (result.success) {
         if (result.data.requiresPayment) {
           // This should NEVER happen for admin purchases - log error and prevent redirect
@@ -366,9 +366,9 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
             title: "Purchase Successful! 🎉",
             description: `Bundle purchased for ${phone}. Datamart Balance: GH₵${result.data.remainingBalance}`,
           });
-          
+
           onOpenChange(false);
-          
+
           // Redirect to account page
           setTimeout(() => {
             window.location.href = '/account?purchase_success=true';
@@ -426,7 +426,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       setLoading(false);
       return;
     }
-    
+
     const finalPhone = paymentChannel === "mobile_money" ? phone : undefined;
 
     try {
@@ -446,7 +446,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       });
 
       const result = await res.json();
-      
+
       onOpenChange(false);
 
       if (result.success && result.data.authorization_url) {
@@ -477,182 +477,256 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {user && (
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="font-headline">
-              Purchase {bundle.name}
-            </DialogTitle>
-            <DialogDescription>
-              Confirm details to complete your purchase.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {/* Admin Datamart Purchase Section */}
-          {isAdmin && showDatamartPurchase && (
-            <div className="space-y-3 p-4 border rounded-lg bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
-              <div className="flex items-center gap-2">
-                <Wallet className="w-5 h-5 text-green-600" />
-                <Label className="font-semibold text-green-600">Admin Datamart Wallet</Label>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>Purchase directly from Datamart wallet balance</span>
-                </div>
-                
-                <div className="text-xs text-muted-foreground">
-                  <p>• No Paystack redirect required</p>
-                  <p>• Instant bundle activation</p>
-                  <p>• Direct Datamart API integration</p>
-                </div>
-              </div>
-            </div>
-          )}
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        {user && (
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle className="font-headline">
+                Purchase {bundle.name}
+              </DialogTitle>
+              <DialogDescription>
+                Confirm details to complete your purchase.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div className="space-y-2">
-                <Label>Payment Method</Label>
-                <Select value={paymentChannel} onValueChange={setPaymentChannel}>
-                    <SelectTrigger>
+            {/* Admin Datamart Purchase Section */}
+            {isAdmin && showDatamartPurchase && (
+              <div className="space-y-3 p-4 border rounded-lg bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20">
+                <div className="flex items-center gap-2">
+                  <Wallet className="w-5 h-5 text-green-600" />
+                  <Label className="font-semibold text-green-600">Admin Datamart Wallet</Label>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>Purchase directly from Datamart wallet balance</span>
+                  </div>
+
+                  <div className="text-xs text-muted-foreground">
+                    <p>• No Paystack redirect required</p>
+                    <p>• Instant bundle activation</p>
+                    <p>• Direct Datamart API integration</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+
+            <div className="grid gap-4 py-4">
+              {isAdmin ? (
+                // Admin View: Simple phone input for destination
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Destination Phone Number</Label>
+                    <div className="flex gap-2">
+                      {/* Re-use saved numbers logic for admins or simple input */}
+                      {loadingNumbers ? <Loader2 className="animate-spin" /> : (
+                        <div className="w-full space-y-2">
+                          <Input
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="Enter recipient number (+233...)"
+                          />
+                          <div className="text-xs text-muted-foreground flex gap-2">
+                            <span className="cursor-pointer hover:underline" onClick={() => setPhone(user?.phoneNumber || "+233")}>Use my number</span>
+                            <span>|</span>
+                            <span className="cursor-pointer hover:underline" onClick={() => setShowAddNumber(true)}>Save new</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Saved numbers dropdown for quick pick */}
+                  {savedNumbers.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Quick Pick</Label>
+                      <Select onValueChange={setPhone}>
+                        <SelectTrigger className="h-8">
+                          <SelectValue placeholder="Select saved contact" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {savedNumbers.map(num => (
+                            <SelectItem key={num.number} value={num.number}>{num.name} - {num.number}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Add Number Form (Reused) */}
+                  {showAddNumber && (
+                    <div className="space-y-3 p-3 border rounded-md bg-muted/20">
+                      <Label className="font-semibold text-xs">Save Contact</Label>
+                      <Input
+                        className="h-8"
+                        type="text"
+                        placeholder="Name (e.g., Mom)"
+                        value={newNumberName}
+                        onChange={(e) => setNewNumberName(e.target.value)}
+                      />
+                      <Input
+                        className="h-8"
+                        type="tel"
+                        placeholder="+233..."
+                        value={newNumber}
+                        onChange={(e) => setNewNumber(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Button size="sm" onClick={handleAddNumber} disabled={isAddingNumber} className="w-full">
+                          {isAddingNumber && <Loader2 className="animate-spin mr-2" />} Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setShowAddNumber(false)} className="w-full">Cancel</Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Customer View: Standard Payment Flow
+                <>
+                  <div className="space-y-2">
+                    <Label>Payment Method</Label>
+                    <Select value={paymentChannel} onValueChange={setPaymentChannel}>
+                      <SelectTrigger>
                         <SelectValue placeholder="Select a payment method" />
-                    </SelectTrigger>
-                    <SelectContent>
+                      </SelectTrigger>
+                      <SelectContent>
                         <SelectItem value="card">Card</SelectItem>
                         <SelectItem value="mobile_money">Mobile Money</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            {paymentChannel === "mobile_money" && (
-                <>
-                <div className="space-y-2">
-                    <Label>Phone Number</Label>
-                    {loadingNumbers ? <Loader2 className="animate-spin" /> : (
-                         <Select value={phone} onValueChange={setPhone}>
+                  {paymentChannel === "mobile_money" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Phone Number</Label>
+                        {loadingNumbers ? <Loader2 className="animate-spin" /> : (
+                          <Select value={phone} onValueChange={setPhone}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select a saved number" />
+                              <SelectValue placeholder="Select a saved number" />
                             </SelectTrigger>
                             <SelectContent>
-                                {savedNumbers.map(num => (
-                                    <SelectItem key={num.number} value={num.number}>{num.name} - {num.number}</SelectItem>
-                                ))}
+                              {savedNumbers.map(num => (
+                                <SelectItem key={num.number} value={num.number}>{num.name} - {num.number}</SelectItem>
+                              ))}
                             </SelectContent>
-                        </Select>
-                    )}
-                </div>
+                          </Select>
+                        )}
+                      </div>
 
-                {showAddNumber ? (
-                    <div className="space-y-3 p-3 border rounded-md">
-                        <Label className="font-semibold">Add New Number</Label>
-                         <Input
+                      {showAddNumber ? (
+                        <div className="space-y-3 p-3 border rounded-md">
+                          <Label className="font-semibold">Add New Number</Label>
+                          <Input
                             type="text"
                             placeholder="Name (e.g., Mom)"
                             value={newNumberName}
                             onChange={(e) => setNewNumberName(e.target.value)}
-                        />
-                         <Input
+                          />
+                          <Input
                             type="tel"
                             placeholder="+233..."
                             value={newNumber}
                             onChange={(e) => setNewNumber(e.target.value)}
-                        />
-                        <div className="flex gap-2">
-                          <Button onClick={handleAddNumber} disabled={isAddingNumber} className="w-full">
-                            {isAddingNumber && <Loader2 className="animate-spin mr-2"/>} Save
-                          </Button>
-                           <Button variant="ghost" onClick={() => setShowAddNumber(false)} className="w-full">Cancel</Button>
+                          />
+                          <div className="flex gap-2">
+                            <Button onClick={handleAddNumber} disabled={isAddingNumber} className="w-full">
+                              {isAddingNumber && <Loader2 className="animate-spin mr-2" />} Save
+                            </Button>
+                            <Button variant="ghost" onClick={() => setShowAddNumber(false)} className="w-full">Cancel</Button>
+                          </div>
                         </div>
-                    </div>
-                ) : (
-                    <Button variant="outline" size="sm" onClick={() => setShowAddNumber(true)}>
-                        <UserPlus className="mr-2 h-4 w-4" /> Add a new number
-                    </Button>
-                )}
-                </>
-            )}
+                      ) : (
+                        <Button variant="outline" size="sm" onClick={() => setShowAddNumber(true)}>
+                          <UserPlus className="mr-2 h-4 w-4" /> Add a new number
+                        </Button>
+                      )}
+                    </>
+                  )}
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                </>
+              )}
             </div>
-          </div>
-          
-          <DialogFooter className="flex-col gap-2">
-            {/* Debug Info */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
-                Debug: isAdmin={isAdmin.toString()}, showDatamartPurchase={showDatamartPurchase.toString()}
-              </div>
-            )}
-            
-            {/* Admin Datamart Purchase Button */}
-            {isAdmin && showDatamartPurchase && (
-              <Button 
-                onClick={handleDatamartPurchase} 
-                disabled={loading} 
-                className="w-full bg-green-600 hover:bg-green-700"
-              >
-                {loading && <Loader2 className="animate-spin mr-2" />}
-                <Wallet className="mr-2 h-4 w-4" />
-                Purchase with Datamart Wallet (GH₵{bundle.price.toFixed(2)})
-              </Button>
-            )}
-            
-            {/* Regular Payment Button - ONLY for customers */}
-            {!isAdmin && (
-              <Button onClick={handlePrimaryActionClick} type="button" disabled={loading} className="w-full">
-                {loading && <Loader2 className="animate-spin mr-2" />}
-                <CreditCard className="mr-2 h-4 w-4" />
-                Pay with {paymentChannel === "mobile_money" ? "Mobile Money" : "Card"} (GH₵{bundle.price.toFixed(2)})
-              </Button>
-            )}
-            
-            {/* Admin-only message when Datamart purchase is not available */}
-            {isAdmin && !showDatamartPurchase && (
-              <div className="w-full p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
-                <div className="flex items-center gap-2 text-yellow-800">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">Admin Wallet Purchase Unavailable</span>
+
+            <DialogFooter className="flex-col gap-2">
+              {/* Debug Info */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-gray-500 p-2 bg-gray-100 rounded">
+                  Debug: isAdmin={isAdmin.toString()}, showDatamartPurchase={showDatamartPurchase.toString()}
                 </div>
-                <p className="text-xs text-yellow-700 mt-1">
-                  Datamart wallet purchase is currently unavailable. Please contact support.
-                </p>
-              </div>
-            )}
-            
-            <DialogClose asChild>
+              )}
+
+              {/* Admin Datamart Purchase Button */}
+              {isAdmin && showDatamartPurchase && (
+                <Button
+                  onClick={handleDatamartPurchase}
+                  disabled={loading}
+                  className="w-full bg-green-600 hover:bg-green-700"
+                >
+                  {loading && <Loader2 className="animate-spin mr-2" />}
+                  <Wallet className="mr-2 h-4 w-4" />
+                  Purchase with Datamart Wallet (GH₵{bundle.price.toFixed(2)})
+                </Button>
+              )}
+
+              {/* Regular Payment Button - ONLY for customers */}
+              {!isAdmin && (
+                <Button onClick={handlePrimaryActionClick} type="button" disabled={loading} className="w-full">
+                  {loading && <Loader2 className="animate-spin mr-2" />}
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Pay with {paymentChannel === "mobile_money" ? "Mobile Money" : "Card"} (GH₵{bundle.price.toFixed(2)})
+                </Button>
+              )}
+
+              {/* Admin-only message when Datamart purchase is not available */}
+              {isAdmin && !showDatamartPurchase && (
+                <div className="w-full p-3 border border-yellow-200 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center gap-2 text-yellow-800">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">Admin Wallet Purchase Unavailable</span>
+                  </div>
+                  <p className="text-xs text-yellow-700 mt-1">
+                    Datamart wallet purchase is currently unavailable. Please contact support.
+                  </p>
+                </div>
+              )}
+
+              <DialogClose asChild>
                 <Button variant="outline" className="w-full">Cancel</Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      )}
-    </Dialog>
-    <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        )}
+      </Dialog>
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <AlertDialogContent>
-            <AlertDialogHeader>
+          <AlertDialogHeader>
             <AlertDialogTitle>Confirm Phone Number</AlertDialogTitle>
             <AlertDialogDescription>
-                You are about to purchase a bundle for the number{" "}
-                <span className="font-bold text-primary">{phone}</span>.
-                <br />
-                Please confirm this is the correct number.
+              You are about to purchase a bundle for the number{" "}
+              <span className="font-bold text-primary">{phone}</span>.
+              <br />
+              Please confirm this is the correct number.
             </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
             <AlertDialogCancel>Change Number</AlertDialogCancel>
             <AlertDialogAction onClick={handlePurchase}>Confirm & Pay</AlertDialogAction>
-            </AlertDialogFooter>
+          </AlertDialogFooter>
         </AlertDialogContent>
-    </AlertDialog>
-   </>
+      </AlertDialog>
+    </>
   );
 }

@@ -8,11 +8,12 @@ export const dynamic = 'force-dynamic';
 export async function GET(req: Request) {
   try {
     // Verify authentication using the same pattern as working endpoints
-    const authorization = headers().get('Authorization');
+    const headersList = await headers();
+    const authorization = headersList.get('Authorization');
     if (!authorization?.startsWith('Bearer ')) {
       return NextResponse.json({ success: false, error: 'Unauthorized: No auth token provided.' }, { status: 401 });
     }
-    
+
     const idToken = authorization.split('Bearer ')[1];
     const decodedToken = await adminAuth.verifyIdToken(idToken);
 
@@ -27,11 +28,11 @@ export async function GET(req: Request) {
     // Fetch real DataMart wallet balance
     console.log("Fetching DataMart wallet balance...");
     const datamartBalance = await fetchWalletBalance();
-    
+
     if (datamartBalance === null) {
-      return NextResponse.json({ 
-        success: false, 
-        error: "Failed to fetch DataMart wallet balance. Please check API configuration." 
+      return NextResponse.json({
+        success: false,
+        error: "Failed to fetch DataMart wallet balance. Please check API configuration."
       }, { status: 500 });
     }
 
@@ -49,7 +50,7 @@ export async function GET(req: Request) {
         .orderBy('createdAt', 'desc')
         .limit(20)
         .get();
-        
+
       // If no admin purchases found, get all purchase transactions
       if (datamartTransactionsSnapshot.empty) {
         console.log("No admin purchases found, fetching all purchase transactions");
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
           .where('type', '==', 'purchase')
           .limit(20)
           .get();
-          
+
         // If no admin purchases found, get all purchase transactions
         if (datamartTransactionsSnapshot.empty) {
           datamartTransactionsSnapshot = await adminDb
@@ -82,8 +83,8 @@ export async function GET(req: Request) {
       } catch (fallbackError) {
         console.error("Firestore fallback query also failed:", fallbackError);
         // If both queries fail, return data without transactions
-        return NextResponse.json({ 
-          success: true, 
+        return NextResponse.json({
+          success: true,
           data: {
             datamartBalance,
             totalTransactions: 0,
@@ -112,15 +113,15 @@ export async function GET(req: Request) {
     });
 
     const totalTransactions = datamartTransactionsSnapshot.size;
-    
+
     console.log("📊 Transaction query results:", {
       totalFound: totalTransactions,
       adminPurchases: recentTransactions.filter(t => t.type === 'purchase').length,
       sampleTransaction: recentTransactions[0] || 'No transactions found'
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       data: {
         datamartBalance,
         totalTransactions,
@@ -136,7 +137,7 @@ export async function GET(req: Request) {
       code: err.code,
       stack: err.stack
     });
-    
+
     // More specific error messages
     let errorMessage = "Internal Server Error";
     if (err.code === 'auth/id-token-expired') {
@@ -148,10 +149,10 @@ export async function GET(req: Request) {
     } else if (err.message) {
       errorMessage = err.message;
     }
-    
-    return NextResponse.json({ 
-      success: false, 
-      error: errorMessage 
+
+    return NextResponse.json({
+      success: false,
+      error: errorMessage
     }, { status: 500 });
   }
 }
