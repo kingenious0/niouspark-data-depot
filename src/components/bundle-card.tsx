@@ -249,13 +249,16 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
   }
 
   const handleAddNumber = async () => {
-    if (!newNumberName || !newNumber) {
+    // For admin, we save the number in the main 'phone' input. For customers, they use the 'newNumber' input.
+    const numberToSave = isAdmin ? phone : newNumber;
+
+    if (!newNumberName || !numberToSave) {
       toast({ title: "Error", description: "Please provide a name and number.", variant: "destructive" });
       return;
     }
     setIsAddingNumber(true);
     try {
-      const formattedNewNumber = cleanAndFormatGhanaPhoneNumber(newNumber);
+      const formattedNewNumber = cleanAndFormatGhanaPhoneNumber(numberToSave);
       const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/user/saved-numbers', {
         method: 'POST',
