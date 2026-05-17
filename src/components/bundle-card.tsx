@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth";
-import { Loader2, UserPlus, Wallet, CreditCard, AlertCircle } from "lucide-react";
+import { Loader2, UserPlus, Wallet, CreditCard, AlertCircle, Smartphone } from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
   AlertDialog,
@@ -516,69 +516,116 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
               </div>
             )}
 
-            <div className="py-4 space-y-5">
+            <div className="py-2 space-y-4 w-full max-w-full overflow-hidden">
               {isAdmin ? (
-                // PREMIUM ADMIN VIEW
-                <div className="space-y-4">
+                // PREMIUM ADMIN VIEW (REDESIGNED FOR ABSOLUTE RESPONSIVENESS)
+                <div className="space-y-4 w-full max-w-full overflow-hidden">
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <Label className="text-sm font-medium">Recipient Number</Label>
-                      {savedNumbers.length > 0 && (
-                        <Select onValueChange={setPhone}>
-                          <SelectTrigger className="h-7 w-[140px] text-xs border-dashed">
-                            <SelectValue placeholder="Quick Pick" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {savedNumbers.map(num => (
-                              <SelectItem key={num.number} value={num.number} className="text-xs">
-                                {num.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                    <Label className="text-sm font-semibold tracking-tight text-slate-800 dark:text-slate-200">
+                      Recipient Number
+                    </Label>
+
+                    {/* Clean & Premium Input Area */}
+                    <div className="relative w-full">
+                      <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 select-none pointer-events-none" />
+                      <Input
+                        className="w-full h-12 text-base font-bold font-mono tracking-wide pl-10 pr-10 shadow-sm transition-all rounded-xl focus-visible:ring-emerald-500/30 border-slate-200 dark:border-slate-800 focus:border-emerald-500 bg-background"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="020 000 0000"
+                      />
+                      {phone && phone !== "+233" && (
+                        <button
+                          type="button"
+                          onClick={() => setPhone("+233")}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       )}
                     </div>
 
-                    <div className="relative group">
-                      <Input
-                        className="h-12 text-lg font-mono tracking-wide pl-4 shadow-sm transition-all focus-visible:ring-emerald-500/30"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+233..."
-                      />
-                      {/* Shortcuts inside input area or below */}
-                    </div>
+                    {/* Horizontal Contacts Carousel (Frictionless Quick Pick) */}
+                    {savedNumbers.length > 0 && (
+                      <div className="space-y-1.5 w-full overflow-hidden">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block">
+                          Quick Pick Contacts
+                        </span>
+                        <div className="w-full min-w-0 overflow-hidden">
+                          <div className="flex gap-1.5 overflow-x-auto pb-2 scroll-smooth -mx-1 px-1 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            {savedNumbers.map(num => {
+                              const isSelected = phone === num.number || 
+                                (phone.replace(/\D/g, '') === num.number.replace(/\D/g, '')) ||
+                                (phone.replace(/^(\+233|233|0)/, '') === num.number.replace(/^(\+233|233|0)/, ''));
+                              
+                              return (
+                                <button
+                                  key={num.number}
+                                  type="button"
+                                  onClick={() => setPhone(num.number)}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 whitespace-nowrap active:scale-95 ${
+                                    isSelected
+                                      ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500 dark:bg-emerald-500/20 dark:text-emerald-400'
+                                      : 'bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800'
+                                  }`}
+                                >
+                                  <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                  <span className="max-w-[100px] truncate">{num.name}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                    <div className="flex items-center justify-between text-xs">
+                    {/* Quick Utility Buttons */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-900">
                       <button
                         type="button"
-                        className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                        className="text-xs font-semibold text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5 py-1 px-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-900"
                         onClick={() => setPhone(user?.phoneNumber || "+233")}
                       >
-                        <span className="w-1.5 h-1.5 rounded-full bg-primary/40" /> Use my number
+                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        Use My Number
                       </button>
 
                       <button
                         type="button"
-                        className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+                        className={`text-xs font-semibold transition-colors flex items-center gap-1.5 py-1 px-1.5 rounded-md ${
+                          showAddNumber
+                            ? 'text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20'
+                            : 'text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-900'
+                        }`}
                         onClick={() => setShowAddNumber(!showAddNumber)}
                       >
-                        <UserPlus className="w-3 h-3" /> {showAddNumber ? 'Cancel Save' : 'Save New Contact'}
+                        <UserPlus className="w-3.5 h-3.5" />
+                        {showAddNumber ? 'Cancel' : 'Save as Contact'}
                       </button>
                     </div>
                   </div>
 
-                  {/* Add Number Form (Slide/Fade in) */}
+                  {/* Add Number Form (Sleek Drawer-like Panel) */}
                   {showAddNumber && (
-                    <div className="p-3 border rounded-lg bg-muted/30 animate-in fade-in slide-in-from-top-2">
-                      <div className="grid grid-cols-3 gap-2">
+                    <div className="p-3 border border-emerald-100 dark:border-emerald-950/30 rounded-xl bg-gradient-to-r from-emerald-50/30 to-teal-50/30 dark:from-emerald-950/5 dark:to-teal-950/5 animate-in fade-in slide-in-from-top-3 duration-250">
+                      <Label className="text-[10px] uppercase tracking-wider text-emerald-800 dark:text-emerald-400 font-bold block mb-1.5">
+                        Save "{phone}" as Contact
+                      </Label>
+                      <div className="flex gap-2">
                         <Input
-                          className="col-span-2 h-8 text-sm"
-                          placeholder="Contact Name (e.g. Mom)"
+                          className="flex-1 h-9 text-xs rounded-lg border-emerald-200/50 dark:border-emerald-900/30 focus-visible:ring-emerald-500/20 bg-background"
+                          placeholder="Contact Name (e.g. Mary Lil Sis)"
                           value={newNumberName}
                           onChange={(e) => setNewNumberName(e.target.value)}
                         />
-                        <Button size="sm" onClick={handleAddNumber} disabled={isAddingNumber} className="h-8">
+                        <Button 
+                          size="sm" 
+                          onClick={handleAddNumber} 
+                          disabled={isAddingNumber || !newNumberName.trim()}
+                          className="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all active:scale-95 shadow-sm"
+                        >
                           {isAddingNumber ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
                         </Button>
                       </div>
@@ -587,11 +634,11 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
                 </div>
               ) : (
                 // Customer View: Standard Payment Flow
-                <>
+                <div className="space-y-4 w-full max-w-full overflow-hidden">
                   <div className="space-y-2">
-                    <Label>Payment Method</Label>
+                    <Label className="text-sm font-semibold text-slate-800 dark:text-slate-200">Payment Method</Label>
                     <Select value={paymentChannel} onValueChange={setPaymentChannel}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 rounded-lg">
                         <SelectValue placeholder="Select a payment method" />
                       </SelectTrigger>
                       <SelectContent>
@@ -602,51 +649,119 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
                   </div>
 
                   {paymentChannel === "mobile_money" && (
-                    <>
-                      <div className="space-y-2">
-                        <Label>Phone Number</Label>
-                        {loadingNumbers ? <Loader2 className="animate-spin" /> : (
-                          <Select value={phone} onValueChange={setPhone}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select a saved number" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {savedNumbers.map(num => (
-                                <SelectItem key={num.number} value={num.number}>{num.name} - {num.number}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                    <div className="space-y-4 pt-1 w-full overflow-hidden">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-semibold tracking-tight text-slate-800 dark:text-slate-200">
+                          Mobile Money Recipient Number
+                        </Label>
+                        
+                        {/* Clean & Premium Input Area */}
+                        <div className="relative w-full">
+                          <Smartphone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 select-none pointer-events-none" />
+                          <Input
+                            className="w-full h-12 text-base font-bold font-mono tracking-wide pl-10 pr-10 shadow-sm transition-all rounded-xl focus-visible:ring-emerald-500/30 border-slate-200 dark:border-slate-800 focus:border-emerald-500 bg-background"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            placeholder="020 000 0000"
+                          />
+                          {phone && phone !== "+233" && (
+                            <button
+                              type="button"
+                              onClick={() => setPhone("+233")}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Saved Contacts Carousel (Frictionless Autofill) */}
+                        {savedNumbers.length > 0 && (
+                          <div className="space-y-1.5 w-full overflow-hidden">
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold block">
+                              Quick Pick Contacts
+                            </span>
+                            <div className="w-full min-w-0 overflow-hidden">
+                              <div className="flex gap-1.5 overflow-x-auto pb-2 scroll-smooth -mx-1 px-1 no-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                                {savedNumbers.map(num => {
+                                  const isSelected = phone === num.number || 
+                                    (phone.replace(/\D/g, '') === num.number.replace(/\D/g, '')) ||
+                                    (phone.replace(/^(\+233|233|0)/, '') === num.number.replace(/^(\+233|233|0)/, ''));
+                                  
+                                  return (
+                                    <button
+                                      key={num.number}
+                                      type="button"
+                                      onClick={() => setPhone(num.number)}
+                                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 whitespace-nowrap active:scale-95 ${
+                                        isSelected
+                                          ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500 dark:bg-emerald-500/20 dark:text-emerald-400'
+                                          : 'bg-slate-50 dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800'
+                                      }`}
+                                    >
+                                      <div className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                                      <span className="max-w-[100px] truncate">{num.name}</span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          </div>
                         )}
+
+                        {/* Quick Utility Buttons */}
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-900">
+                          <button
+                            type="button"
+                            className="text-xs font-semibold text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5 py-1 px-1.5 rounded-md hover:bg-slate-50 dark:hover:bg-slate-900"
+                            onClick={() => setPhone(user?.phoneNumber || "+233")}
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                            Use My Number
+                          </button>
+
+                          <button
+                            type="button"
+                            className={`text-xs font-semibold transition-colors flex items-center gap-1.5 py-1 px-1.5 rounded-md ${
+                              showAddNumber
+                                ? 'text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20'
+                                : 'text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-900'
+                            }`}
+                            onClick={() => setShowAddNumber(!showAddNumber)}
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            {showAddNumber ? 'Cancel' : 'Save as Contact'}
+                          </button>
+                        </div>
                       </div>
 
-                      {showAddNumber ? (
-                        <div className="space-y-3 p-3 border rounded-md">
-                          <Label className="font-semibold">Add New Number</Label>
-                          <Input
-                            type="text"
-                            placeholder="Name (e.g., Mom)"
-                            value={newNumberName}
-                            onChange={(e) => setNewNumberName(e.target.value)}
-                          />
-                          <Input
-                            type="tel"
-                            placeholder="+233..."
-                            value={newNumber}
-                            onChange={(e) => setNewNumber(e.target.value)}
-                          />
+                      {/* Add Number Form (Sleek Drawer-like Panel) */}
+                      {showAddNumber && (
+                        <div className="p-3 border border-emerald-100 dark:border-emerald-950/30 rounded-xl bg-gradient-to-r from-emerald-50/30 to-teal-50/30 dark:from-emerald-950/5 dark:to-teal-950/5 animate-in fade-in slide-in-from-top-3 duration-250">
+                          <Label className="text-[10px] uppercase tracking-wider text-emerald-800 dark:text-emerald-400 font-bold block mb-1.5">
+                            Save "{phone}" as Contact
+                          </Label>
                           <div className="flex gap-2">
-                            <Button onClick={handleAddNumber} disabled={isAddingNumber} className="w-full">
-                              {isAddingNumber && <Loader2 className="animate-spin mr-2" />} Save
+                            <Input
+                              className="flex-1 h-9 text-xs rounded-lg border-emerald-200/50 dark:border-emerald-900/30 focus-visible:ring-emerald-500/20 bg-background"
+                              placeholder="Contact Name (e.g. Mom)"
+                              value={newNumberName}
+                              onChange={(e) => setNewNumberName(e.target.value)}
+                            />
+                            <Button 
+                              size="sm" 
+                              onClick={handleAddNumber} 
+                              disabled={isAddingNumber || !newNumberName.trim()}
+                              className="h-9 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all active:scale-95 shadow-sm"
+                            >
+                              {isAddingNumber ? <Loader2 className="w-3 h-3 animate-spin" /> : "Save"}
                             </Button>
-                            <Button variant="ghost" onClick={() => setShowAddNumber(false)} className="w-full">Cancel</Button>
                           </div>
                         </div>
-                      ) : (
-                        <Button variant="outline" size="sm" onClick={() => setShowAddNumber(true)}>
-                          <UserPlus className="mr-2 h-4 w-4" /> Add a new number
-                        </Button>
                       )}
-                    </>
+                    </div>
                   )}
 
                   <div className="space-y-2">
@@ -659,7 +774,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
                       placeholder="you@example.com"
                     />
                   </div>
-                </>
+                </div>
               )}
             </div>
 
