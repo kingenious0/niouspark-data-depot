@@ -255,11 +255,12 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
     }
     setIsAddingNumber(true);
     try {
+      const formattedNewNumber = cleanAndFormatGhanaPhoneNumber(newNumber);
       const idToken = await auth.currentUser?.getIdToken();
       const res = await fetch('/api/user/saved-numbers', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${idToken}` },
-        body: JSON.stringify({ name: newNumberName, number: newNumber }),
+        body: JSON.stringify({ name: newNumberName, number: formattedNewNumber }),
       });
       const data = await res.json();
       if (data.success) {
@@ -281,10 +282,13 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
 
   const handlePrimaryActionClick = () => {
     if (paymentChannel === "mobile_money") {
-      if (!phone.match(/^\+233[0-9]{9}$/)) {
+      try {
+        const formattedPhone = cleanAndFormatGhanaPhoneNumber(phone);
+        setPhone(formattedPhone);
+      } catch (err: any) {
         toast({
           title: "Invalid Phone Number",
-          description: "Please select or enter a valid Ghana phone number.",
+          description: "Please enter a valid Ghana phone number (e.g. 0XXXXXXXXX or +233XXXXXXXXX).",
           variant: "destructive",
         });
         return;
@@ -309,10 +313,13 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       return;
     }
 
-    if (!phone.match(/^\+233[0-9]{9}$/)) {
+    try {
+      const formattedPhone = cleanAndFormatGhanaPhoneNumber(phone);
+      setPhone(formattedPhone);
+    } catch (err: any) {
       toast({
         title: "Invalid Phone Number",
-        description: "Please select or enter a valid Ghana phone number.",
+        description: "Please enter a valid Ghana phone number (e.g. 0XXXXXXXXX or +233XXXXXXXXX).",
         variant: "destructive",
       });
       setLoading(false);
@@ -717,4 +724,33 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
       </AlertDialog>
     </>
   );
+}
+
+// Helper to clean and format Ghana phone numbers to +233XXXXXXXXX format
+function cleanAndFormatGhanaPhoneNumber(phone: string): string {
+  // Remove all whitespace and common punctuation
+  let clean = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Get digits only
+  let digits = clean.replace(/\D/g, '');
+  
+  // Normalize digits to 233XXXXXXXXX
+  if (digits.startsWith('2330') && digits.length === 13) {
+    digits = '233' + digits.substring(4); // Remove the extra '0' after '233'
+  } else if (digits.startsWith('233') && digits.length === 12) {
+    // Correct format digits (233 + 9 digits)
+  } else if (digits.startsWith('0') && digits.length === 10) {
+    digits = '233' + digits.substring(1); // Convert 0XXXXXXXXX to 233XXXXXXXXX
+  } else if (digits.length === 9) {
+    digits = '233' + digits; // Convert XXXXXXXXX to 233XXXXXXXXX
+  } else if (digits.startsWith('233') && digits.length === 13 && digits[3] === '0') {
+    digits = '233' + digits.substring(4); // Remove '0' if user did 2330XXXXXXXXX
+  }
+  
+  // Validate that we have exactly +233 followed by 9 digits
+  if (/^233[0-9]{9}$/.test(digits)) {
+    return '+' + digits;
+  }
+  
+  throw new Error("Invalid Ghana phone number format.");
 }

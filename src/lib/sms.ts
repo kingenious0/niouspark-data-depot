@@ -99,11 +99,16 @@ export async function sendSms(to: string, text: string, msgId?: string): Promise
  */
 function normalizePhoneNumber(phone: string): string {
   // Remove all non-digit characters
-  const digits = phone.replace(/\D/g, '');
+  let digits = phone.replace(/\D/g, '');
+  
+  // Handle 2330XXXXXXXXX (often happens when user prefixes with +233 and keeps the leading 0)
+  if (digits.startsWith('2330') && digits.length === 13) {
+    digits = '233' + digits.substring(4);
+  }
   
   // Handle different formats
-  if (digits.startsWith('233')) {
-    return digits; // Already in correct format
+  if (digits.startsWith('233') && digits.length === 12) {
+    return digits; // Correct format (233 + 9 digits)
   } else if (digits.startsWith('0') && digits.length === 10) {
     return '233' + digits.substring(1); // Convert 0XXXXXXXXX to 233XXXXXXXXX
   } else if (digits.length === 9) {
