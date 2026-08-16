@@ -37,19 +37,23 @@ export async function POST(req: NextRequest) {
   const requestedLimit = parseInt(url.searchParams.get('limit') || '50', 10);
   const limit = Math.min(Math.max(requestedLimit || 50, 1), 200);
 
+  // Query on the single `createdAt` field (auto single-field index) and filter
+  // for DataMart orders in code — `where('datamartOrderReference', '!=', null)`
+  // combined with orderBy requires a Firestore composite index.
   const snap = await adminDb
     .collection('transactions')
-    .where('datamartOrderReference', '!=', null)
     .orderBy('createdAt', 'desc')
     .limit(limit)
     .get();
+
+  const candidates = snap.docs.filter((doc) => doc.data().datamartOrderReference);
 
   let reconciled = 0;
   let skipped = 0;
   let failed = 0;
   const errors: Array<{ id: string; reason: string }> = [];
 
-  for (const doc of snap.docs) {
+  for (const doc of candidates) {
     const data = doc.data();
     const currentStatus = data.datamartOrderStatus || data.status;
 
@@ -86,7 +90,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     data: {
-      scanned: snap.size,
+      scanned: candidates.length,
       reconciled,
       skipped,
       failed,

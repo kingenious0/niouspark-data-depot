@@ -35,10 +35,12 @@ export async function GET(
     return NextResponse.json({ success: false, error: 'Invalid or expired token' }, { status: 401 });
   }
 
+  // Query on the single `reference` field only (auto single-field index) and
+  // enforce ownership in code — a two-field where(reference, userId) requires a
+  // Firestore composite index that may not exist, which would 500 this route.
   const snap = await adminDb
     .collection('transactions')
     .where('reference', '==', reference)
-    .where('userId', '==', uid)
     .limit(1)
     .get();
 
@@ -48,6 +50,10 @@ export async function GET(
 
   const doc = snap.docs[0];
   const data = doc.data();
+
+  if (data.userId !== uid) {
+    return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+  }
 
   const currentStatus = data.datamartOrderStatus || data.status;
   const terminal = Boolean(currentStatus) && isTerminalDatamartStatus(currentStatus);

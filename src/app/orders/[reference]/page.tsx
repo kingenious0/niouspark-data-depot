@@ -75,13 +75,20 @@ export default function OrderTrackingPage() {
       const response = await fetch(`/api/orders/${encodeURIComponent(reference)}/status`, {
         headers: { Authorization: `Bearer ${idToken}` },
       });
-      const result = await response.json();
-      if (!response.ok) {
-        setError(result.error || "Failed to load order status.");
+      let result: { success?: boolean; error?: string; data?: OrderStatusData };
+      try {
+        result = await response.json();
+      } catch {
+        setError(`Server error (${response.status}). Please try again.`);
         setData(null);
         return;
       }
-      setData(result.data);
+      if (!response.ok) {
+        setError(result.error || `Failed to load order status (${response.status}).`);
+        setData(null);
+        return;
+      }
+      setData(result.data || null);
       setError(null);
     } catch {
       setError("Network error. Please try again.");

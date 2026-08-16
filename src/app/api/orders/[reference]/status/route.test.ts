@@ -14,10 +14,8 @@ vi.mock("@/lib/firebase-admin", () => ({
   adminDb: {
     collection: () => ({
       where: () => ({
-        where: () => ({
-          limit: () => ({
-            get: vi.fn(async () => dbQueryResult),
-          }),
+        limit: () => ({
+          get: vi.fn(async () => dbQueryResult),
         }),
       }),
     }),
