@@ -67,36 +67,40 @@ export default function OrderTrackingPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
+  const fetchStatus = useCallback(async (idToken: string) => {
+    const response = await fetch(`/api/orders/${encodeURIComponent(reference)}/status`, {
+      headers: { Authorization: `Bearer ${idToken}` },
+    });
+    let result: { success?: boolean; error?: string; data?: OrderStatusData };
+    try {
+      result = await response.json();
+    } catch {
+      setError(`Server error (${response.status}). Please try again.`);
+      setData(null);
+      return;
+    }
+    if (!response.ok) {
+      setError(result.error || `Failed to load order status (${response.status}).`);
+      setData(null);
+      return;
+    }
+    setData(result.data || null);
+    setError(null);
+  }, [reference]);
+
   const load = useCallback(async () => {
     if (!user) return;
     setRefreshing(true);
     try {
       const idToken = await user.getIdToken();
-      const response = await fetch(`/api/orders/${encodeURIComponent(reference)}/status`, {
-        headers: { Authorization: `Bearer ${idToken}` },
-      });
-      let result: { success?: boolean; error?: string; data?: OrderStatusData };
-      try {
-        result = await response.json();
-      } catch {
-        setError(`Server error (${response.status}). Please try again.`);
-        setData(null);
-        return;
-      }
-      if (!response.ok) {
-        setError(result.error || `Failed to load order status (${response.status}).`);
-        setData(null);
-        return;
-      }
-      setData(result.data || null);
-      setError(null);
+      await fetchStatus(idToken);
     } catch {
       setError("Network error. Please try again.");
     } finally {
       setRefreshing(false);
       setLoading(false);
     }
-  }, [reference, user]);
+  }, [user, fetchStatus]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -105,8 +109,20 @@ export default function OrderTrackingPage() {
       setLoading(false);
       return;
     }
-    load();
-  }, [authLoading, user, load]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const idToken = await user.getIdToken();
+        if (cancelled) return;
+        await fetchStatus(idToken);
+      } catch {
+        if (!cancelled) setError("Network error. Please try again.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [authLoading, user, fetchStatus]);
 
   if (authLoading || (loading && !data && !error)) {
     return (
