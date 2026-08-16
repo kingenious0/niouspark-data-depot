@@ -201,6 +201,8 @@ interface Transaction {
 ```bash
 # Datamart API Configuration
 DATAMART_API_KEY=your_datamart_api_key_here
+# Datamart order webhook HMAC secret (server-side only — NEVER NEXT_PUBLIC_)
+DATAMART_WEBHOOK_SECRET=your_webhook_secret_here
 
 # Existing Firebase Configuration
 FIREBASE_SERVICE_ACCOUNT_KEY=your_base64_key
@@ -213,6 +215,12 @@ NEXT_PUBLIC_APP_URL=your_app_url
 2. Generate API key using `/api/developer/generate-api-key`
 3. Add to environment variables
 4. Test with API simulator
+
+### **Datamart Webhook Secret Setup:**
+1. Generate a random secret, e.g. `openssl rand -hex 32`
+2. Add `DATAMART_WEBHOOK_SECRET` to your server-side environment (never `NEXT_PUBLIC_`), including Vercel Production.
+3. Configure the Datamart webhook to POST order events to `NEXT_PUBLIC_APP_URL/api/datamart-webhook` with header `X-DataMart-Signature: HMAC-SHA256(JSON.stringify(body), DATAMART_WEBHOOK_SECRET)`.
+4. The route returns `500` when the secret is missing, `401` on signature mismatch, `400` on malformed JSON, and always `200` (ack) after verification — including for unmatched/duplicate events.
 
 ## **📋 Next Steps for Production**
 

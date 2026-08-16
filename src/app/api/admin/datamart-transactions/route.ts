@@ -58,7 +58,9 @@ export async function GET(req: Request) {
         createdAt: data.createdAt?.toDate?.() || data.createdAt,
         datamartPurchaseId: data.datamartPurchaseId,
         datamartTransactionRef: data.datamartTransactionRef,
-        datamartRemainingBalance: data.datamartRemainingBalance
+        datamartOrderReference: data.datamartOrderReference,
+        datamartBalanceAfter: data.datamartBalanceAfter ?? data.datamartRemainingBalance ?? null,
+        datamartOrderStatus: data.datamartOrderStatus ?? null
       };
     });
 

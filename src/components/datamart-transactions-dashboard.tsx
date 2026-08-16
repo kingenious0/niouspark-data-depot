@@ -34,7 +34,8 @@ interface LocalAdminTransaction {
   createdAt: string;
   datamartPurchaseId: string;
   datamartTransactionRef: string;
-  datamartRemainingBalance: number;
+  datamartBalanceAfter?: number;
+  datamartRemainingBalance?: number;
 }
 
 interface DatamartTransactionsData {
@@ -267,8 +268,8 @@ export default function DatamartTransactionsDashboard() {
                     <div className="text-xs text-muted-foreground bg-muted p-2 rounded">
                       <p><strong>Datamart ID:</strong> {transaction.datamartPurchaseId}</p>
                       <p><strong>Transaction Ref:</strong> {transaction.datamartTransactionRef}</p>
-                      {transaction.datamartRemainingBalance && (
-                        <p><strong>Remaining Balance:</strong> GH₵{transaction.datamartRemainingBalance.toFixed(2)}</p>
+                      {(transaction.datamartBalanceAfter ?? transaction.datamartRemainingBalance) && (
+                        <p><strong>Remaining Balance:</strong> GH₵{(transaction.datamartBalanceAfter ?? transaction.datamartRemainingBalance!).toFixed(2)}</p>
                       )}
                     </div>
                   )}

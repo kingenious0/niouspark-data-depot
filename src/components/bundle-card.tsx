@@ -372,9 +372,10 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
           return;
         } else {
           // Admin wallet purchase successful
+          const balanceAfter = result.data.balanceAfter ?? result.data.remainingBalance;
           toast({
             title: "Purchase Successful! 🎉",
-            description: `Bundle purchased for ${phone}. Datamart Balance: GH₵${result.data.remainingBalance}`,
+            description: `Bundle purchased for ${phone}. Datamart Balance: GH₵${balanceAfter}`,
           });
 
           onOpenChange(false);
@@ -385,7 +386,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
           }, 2000);
         }
       } else {
-        if (result.error === "Insufficient Datamart wallet balance") {
+        if (result.error === "Insufficient wallet balance" || result.error === "Insufficient Datamart wallet balance") {
           toast({
             title: "Insufficient Datamart Wallet Balance",
             description: result.details || "Please top up your Datamart wallet to continue.",

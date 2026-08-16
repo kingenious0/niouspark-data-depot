@@ -1,5 +1,7 @@
 import { collection, query, where, getDocs, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "./firebase";
+import { normalizeCapacity } from "@/lib/datamart-util";
+import { DatamartError, mapDatamartHttpError } from "@/lib/datamart-errors";
 
 export type DatamartBundle = {
     capacity: string;
@@ -34,7 +36,10 @@ export type TransactionStatus =
     | 'abandoned'
     | 'success'
     | 'delivering'
-    | 'delivery_failed';
+    | 'delivery_failed'
+    | 'waiting'
+    | 'processing'
+    | 'refunded';
 
 
 export type Transaction = {
@@ -192,9 +197,11 @@ export async function fetchUserTransactions(userId: string): Promise<Transaction
  * Delivers a data bundle to a specified phone number by calling the DataMart API.
  * @param phone The phone number to deliver the bundle to.
  * @param bundleId The ID of the bundle from DataMart (e.g., 'YELLO-5').
+ * @param idempotencyKey Optional UUID. One per logical purchase — reused on
+ *   retry so DataMart returns the original response instead of double-charging.
  * @returns The result from the DataMart API.
  */
-export async function deliverDataBundle(phone: string, bundleId: string) {
+export async function deliverDataBundle(phone: string, bundleId: string, idempotencyKey?: string) {
     const apiKey = getApiKey();
     if (!apiKey) {
         throw new Error("DATAMART_API_KEY is not configured on the server.");
@@ -206,7 +213,10 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
         throw new Error(`Invalid bundleId format: ${bundleId}. Expected 'NETWORK-CAPACITY'.`);
     }
 
-    console.log(`Attempting to deliver bundle. Phone: ${phone}, Network: ${network}, Capacity: ${capacity}GB`);
+    // DataMart expects a plain GB number ("5"), not a display string ("5GB").
+    const normalizedCapacity = normalizeCapacity(capacity);
+
+    console.log(`Attempting to deliver bundle. Phone: ${phone}, Network: ${network}, Capacity: ${normalizedCapacity}GB`);
 
     try {
         const response = await fetchWithTimeout(`${DATAMART_BASE_URL}/purchase`, {
@@ -214,11 +224,12 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
             headers: {
                 'Content-Type': 'application/json',
                 'X-API-Key': apiKey,
+                ...(idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : {}),
             },
             body: JSON.stringify({
                 phone,
                 network,
-                capacity: `${capacity}GB`,
+                capacity: normalizedCapacity,
             }),
         });
 
@@ -227,7 +238,7 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
         if (!response.ok || result.status !== 'success') {
             const errorMessage = result.message || 'Unknown error from DataMart API.';
             console.error(`DataMart API Error: ${errorMessage}`, result);
-            throw new Error(`Failed to deliver bundle: ${errorMessage}`);
+            throw mapDatamartHttpError(response.status, result, `Failed to deliver bundle: ${errorMessage}`);
         }
 
         console.log('Successfully initiated data bundle delivery via DataMart.', result);
@@ -235,7 +246,15 @@ export async function deliverDataBundle(phone: string, bundleId: string) {
 
     } catch (error) {
         if ((error as Error).name === 'AbortError') {
-            throw new Error("The request to the data provider timed out. Please check your transaction history later.");
+            throw new DatamartError(
+                'TIMEOUT',
+                0,
+                "The request to the data provider timed out. Please check your transaction history later."
+            );
+        }
+        // Re-throw DatamartErrors so callers can distinguish retryable cases
+        if (error instanceof DatamartError) {
+            throw error;
         }
         // Re-throw other errors to be caught by the webhook logic
         throw error;

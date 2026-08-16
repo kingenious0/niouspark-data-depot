@@ -6,6 +6,8 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { deliverDataBundle } from '@/lib/datamart';
 import { sendSms } from '@/lib/sms';
 import { SMS_TEMPLATES, processSmsTemplate } from '@/config/sms';
+import { generateIdempotencyKey } from '@/lib/datamart-idempotency';
+import { isRetryableDatamartError } from '@/lib/datamart-errors';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY || '';
 
@@ -68,11 +70,18 @@ export async function POST(req: NextRequest) {
     }
     
     // 1. First, mark the transaction as paid and being delivered
+    //    Also ensure a DataMart idempotency key exists so webhook retries reuse
+    //    the same key and never double-charge the DataMart wallet.
+    const currentData = currentDoc.data() ?? {};
+    const idempotencyKey =
+      currentData.datamartIdempotencyKey || generateIdempotencyKey();
+
     await docRef.update({
         status: 'delivering',
         updatedAt: Timestamp.now(),
         paystackData: event.data,
         paystackTransactionId: transactionId,
+        datamartIdempotencyKey: idempotencyKey,
     });
     console.log(`Transaction ${docRef.id} status updated to 'delivering'.`);
 
@@ -81,14 +90,22 @@ export async function POST(req: NextRequest) {
     try {
         if (!phoneNumber) throw new Error("No phone number found in transaction metadata for delivery.");
         if (!bundleId) throw new Error("No bundleId found in transaction metadata for delivery.");
-        
-        const deliveryResult = await deliverDataBundle(phoneNumber, bundleId);
+
+        const deliveryResult = await deliverDataBundle(phoneNumber, bundleId, idempotencyKey);
 
          // 3. If delivery is successful, mark transaction as 'completed'
          await docRef.update({
              status: 'completed',
              updatedAt: Timestamp.now(),
              datamartResult: deliveryResult,
+             datamartPurchaseId: deliveryResult.data?.purchaseId ?? null,
+             datamartTransactionRef: deliveryResult.data?.transactionReference ?? null,
+             datamartOrderReference: deliveryResult.data?.orderReference ?? null,
+             datamartBalanceAfter: deliveryResult.data?.balanceAfter ?? null,
+             datamartBalanceBefore: deliveryResult.data?.balanceBefore ?? null,
+             datamartOrderStatus: deliveryResult.data?.orderStatus ?? 'completed',
+             datamartProcessingMethod: deliveryResult.data?.processingMethod ?? null,
+             datamartRateLimit: deliveryResult.rateLimit ?? null,
          });
          console.log(`✅ Bundle delivery for ${docRef.id} successful. Transaction marked 'completed'.`);
 
@@ -98,7 +115,7 @@ export async function POST(req: NextRequest) {
            const bundleMessage = processSmsTemplate(SMS_TEMPLATES.BUNDLE_PURCHASED, {
              bundle: bundleDetails
            });
-           
+
            await sendSms(phoneNumber, bundleMessage, reference);
            console.log(`📱 Bundle purchase SMS sent to ${phoneNumber}`);
          } catch (smsError) {
@@ -108,7 +125,22 @@ export async function POST(req: NextRequest) {
 
     } catch (deliveryError: any) {
         console.error(`🔥 Data bundle delivery FAILED for transaction ${docRef.id}:`, deliveryError);
-        // 4. If delivery fails, mark transaction as 'delivery_failed'
+
+        // If the failure is retryable (timeout / provider unavailable), keep the
+        // transaction in 'delivering' and return 500 so Paystack retries. The
+        // stored idempotency key guarantees no double-charge on the retry.
+        if (isRetryableDatamartError(deliveryError)) {
+            await docRef.update({
+                deliveryError: deliveryError.message,
+                updatedAt: Timestamp.now(),
+            });
+            return NextResponse.json(
+                { status: 'retry', message: 'Delivery timed out; retrying later' },
+                { status: 500 }
+            );
+        }
+
+        // 4. If delivery fails permanently, mark transaction as 'delivery_failed'
         await docRef.update({
             status: 'delivery_failed',
             updatedAt: Timestamp.now(),
@@ -120,7 +152,7 @@ export async function POST(req: NextRequest) {
           const failureMessage = processSmsTemplate(SMS_TEMPLATES.PAYMENT_FAILED, {
             reason: deliveryError.message || 'Bundle delivery failed'
           });
-          
+
           await sendSms(phoneNumber, failureMessage, reference);
           console.log(`📱 Payment failure SMS sent to ${phoneNumber}`);
         } catch (smsError) {

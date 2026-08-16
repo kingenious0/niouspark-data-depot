@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,6 +111,7 @@ export default function OrderHistory({ orders, minimal = false, isSuperAdmin = f
             <TableHead>Amount (GH₵)</TableHead>
             {!minimal && <TableHead>Date</TableHead>}
             <TableHead>Status</TableHead>
+            {!minimal && <TableHead className="w-[90px]">Track</TableHead>}
             {isSuperAdmin && <TableHead className="w-[50px]">Action</TableHead>}
           </TableRow>
         </TableHeader>
@@ -126,6 +128,17 @@ export default function OrderHistory({ orders, minimal = false, isSuperAdmin = f
                   {order.status.replace('_', ' ')}
                 </Badge>
               </TableCell>
+              {!minimal && (
+                <TableCell>
+                  {order.reference ? (
+                    <Button asChild variant="outline" size="sm" className="h-8">
+                      <Link href={`/orders/${encodeURIComponent(order.reference)}`}>Track</Link>
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  )}
+                </TableCell>
+              )}
               {isSuperAdmin && (
                 <TableCell>
                   <AlertDialog>
