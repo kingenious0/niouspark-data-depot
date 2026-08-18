@@ -201,7 +201,7 @@ export async function fetchUserTransactions(userId: string): Promise<Transaction
  *   retry so DataMart returns the original response instead of double-charging.
  * @returns The result from the DataMart API.
  */
-export async function deliverDataBundle(phone: string, bundleId: string, idempotencyKey?: string) {
+export async function deliverDataBundle(phoneNumber: string, bundleId: string, idempotencyKey?: string) {
     const apiKey = getApiKey();
     if (!apiKey) {
         throw new Error("DATAMART_API_KEY is not configured on the server.");
@@ -216,7 +216,7 @@ export async function deliverDataBundle(phone: string, bundleId: string, idempot
     // DataMart expects a plain GB number ("5"), not a display string ("5GB").
     const normalizedCapacity = normalizeCapacity(capacity);
 
-    console.log(`Attempting to deliver bundle. Phone: ${phone}, Network: ${network}, Capacity: ${normalizedCapacity}GB`);
+    console.log(`Attempting to deliver bundle. Phone: ${phoneNumber}, Network: ${network}, Capacity: ${normalizedCapacity}GB`);
 
     try {
         const response = await fetchWithTimeout(`${DATAMART_BASE_URL}/purchase`, {
@@ -227,9 +227,10 @@ export async function deliverDataBundle(phone: string, bundleId: string, idempot
                 ...(idempotencyKey ? { 'X-Idempotency-Key': idempotencyKey } : {}),
             },
             body: JSON.stringify({
-                phone,
+                phoneNumber,
                 network,
                 capacity: normalizedCapacity,
+                gateway: 'wallet',
             }),
         });
 
