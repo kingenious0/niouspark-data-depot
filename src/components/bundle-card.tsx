@@ -343,6 +343,10 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
         bundleName: bundle.name,
       });
 
+      // Unique per purchase so a new purchase of the same bundle is NEVER served
+      // from a stale idempotency replay — each purchase calls the DataMart API.
+      const clientReference = `p-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
       const res = await fetch("/api/datamart-purchase", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -353,6 +357,7 @@ function PurchaseDialog({ isOpen, onOpenChange, bundle }: PurchaseDialogProps) {
           userId: user?.uid,
           email: email,
           bundleName: bundle.name,
+          clientReference,
         }),
       });
 

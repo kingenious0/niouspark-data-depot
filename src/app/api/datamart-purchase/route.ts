@@ -55,11 +55,13 @@ interface PurchaseBody {
   userId?: string;
   email?: string;
   bundleName?: string;
+  /** Unique reference for this specific purchase attempt (from the client). */
+  clientReference?: string;
 }
 
 export async function POST(req: Request) {
   const body: PurchaseBody = await req.json().catch(() => ({}));
-  const { phoneNumber, network, capacity, userId, email, bundleName } = body;
+  const { phoneNumber, network, capacity, userId, email, bundleName, clientReference } = body;
 
   console.log("🔄 Datamart purchase request:", {
     phoneNumber,
@@ -68,6 +70,7 @@ export async function POST(req: Request) {
     userId,
     email,
     bundleName,
+    clientReference,
   });
 
   // Validate required fields
@@ -124,6 +127,7 @@ export async function POST(req: Request) {
     phoneNumber: formattedPhone,
     network: datamartNetwork,
     capacity,
+    clientReference: clientReference || undefined,
   };
 
   console.log(`🔄 Datamart API request:`, datamartRequest);

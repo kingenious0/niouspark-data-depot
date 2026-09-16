@@ -4,6 +4,20 @@ import { normalizeCapacity } from "@/lib/datamart-util";
 import type { DatamartPurchaseRequest, DatamartPurchaseResponse } from "@/lib/datamart-api";
 
 /**
+ * How long a stored "success" is replayed before a fresh attempt is allowed to
+ * call the provider again. A genuine retry (same clientReference) lands here
+ * within milliseconds; but a stale success older than this window should never
+ * mask a real, new purchase.
+ */
+export const SUCCESS_REPLAY_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * How long an in-flight attempt may stay "in_progress" (e.g. stuck from a
+ * crashed function) before a new attempt should mint its own idempotency key.
+ */
+export const IN_PROGRESS_STALE_MS = 2 * 60 * 1000; // 2 minutes
+
+/**
  * Idempotent purchase orchestration.
  *
  * One fresh UUID (`X-Idempotency-Key`) per LOGICAL purchase. A logical purchase
@@ -49,6 +63,14 @@ export interface LogicalPurchaseParams {
   phoneNumber: string;
   network: string;
   capacity: string | number;
+  /**
+   * Optional unique reference for a single purchase attempt. When present, it is
+   * folded into the logical purchase id so two purchases of the SAME bundle to
+   * the SAME number are treated as SEPARATE logical purchases (each calls the
+   * DataMart API) instead of replaying a stored success. The same reference
+   * retried (e.g. after a timeout) still reuses the idempotency key.
+   */
+  clientReference?: string;
 }
 
 export type PurchaseOutcome =
@@ -92,7 +114,8 @@ export function createLogicalPurchaseId(params: LogicalPurchaseParams): string {
   const phone = fingerprintPhone(params.phoneNumber) || "?";
   const network = params.network || "?";
   const capacity = normalizeCapacity(params.capacity) || "?";
-  return `${gateway}:${user}:${phone}:${network}:${capacity}`;
+  const ref = params.clientReference ? `:ref:${params.clientReference}` : "";
+  return `${gateway}:${user}:${phone}:${network}:${capacity}${ref}`;
 }
 
 function toAttemptError(error: DatamartError) {
@@ -120,13 +143,30 @@ export async function executePurchaseWithIdempotency(
 
   let attempt = await store.get(id);
 
-  if (attempt && attempt.status === "success" && attempt.datamartData) {
+  // Replay a stored success ONLY if it is fresh. A stale success must not mask
+  // a real, new purchase of the same bundle — it gets a fresh idempotency key.
+  if (
+    attempt &&
+    attempt.status === "success" &&
+    attempt.datamartData &&
+    now - attempt.updatedAt < SUCCESS_REPLAY_TTL_MS
+  ) {
     return {
       outcome: "success",
       response: attempt.datamartData,
       idempotencyKey: attempt.idempotencyKey,
       attempt,
     };
+  }
+
+  // A stale "in_progress" record (crashed/abandoned function) must not block a
+  // new purchase forever — treat it as retryable so a fresh key is minted.
+  if (
+    attempt &&
+    attempt.status === "in_progress" &&
+    now - attempt.updatedAt >= IN_PROGRESS_STALE_MS
+  ) {
+    await store.update(id, { status: "retryable", updatedAt: Date.now() });
   }
 
   if (attempt && attempt.status === "in_progress") {
@@ -141,7 +181,21 @@ export async function executePurchaseWithIdempotency(
     };
   }
 
-  const idempotencyKey = attempt?.idempotencyKey ?? generateIdempotencyKey();
+  // A stale stored success is a NEW purchase: never reuse its idempotency key,
+  // otherwise the provider returns the original (dedup) response with no charge.
+  const staleSuccess = attempt?.status === "success";
+  const idempotencyKey = staleSuccess ? generateIdempotencyKey() : attempt?.idempotencyKey ?? generateIdempotencyKey();
+
+  if (staleSuccess) {
+    console.warn(`⚠️ Stale success attempt (${id}) exceeded replay TTL — performing a NEW purchase with a fresh idempotency key`);
+    await store.update(id, {
+      idempotencyKey,
+      status: "in_progress",
+      datamartData: undefined,
+      transactionId: undefined,
+      updatedAt: Date.now(),
+    });
+  }
 
   if (!attempt) {
     const fresh: PurchaseAttempt = {

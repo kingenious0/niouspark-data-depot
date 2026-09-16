@@ -76,6 +76,14 @@ describe("createLogicalPurchaseId", () => {
       createLogicalPurchaseId(params)
     );
   });
+
+  it("separates two purchases of the same bundle via clientReference", () => {
+    const a = createLogicalPurchaseId({ ...params, clientReference: "abc" });
+    const b = createLogicalPurchaseId({ ...params, clientReference: "def" });
+    expect(a).not.toBe(b);
+    // Without a reference, the legacy fingerprint is unchanged.
+    expect(createLogicalPurchaseId(params)).toBe(`${params.gateway}:${params.userId}:${"0551234567"}:${params.network}:${"5"}`);
+  });
 });
 
 describe("generateIdempotencyKey", () => {
@@ -171,16 +179,17 @@ describe("executePurchaseWithIdempotency", () => {
     expect(fn).not.toHaveBeenCalled();
   });
 
-  it("replays a stored success instead of purchasing again", async () => {
+  it("replays a fresh stored success instead of purchasing again", async () => {
     const { store, data } = makeStore();
     const id = createLogicalPurchaseId(params);
+    const freshNow = Date.now();
     data.set(id, {
       id,
       idempotencyKey: "done-key",
       status: "success",
       datamartData: successResponse({ purchaseId: "original" }),
-      createdAt: 1,
-      updatedAt: 1,
+      createdAt: freshNow - 1000,
+      updatedAt: freshNow - 1000,
     });
     const fn = vi.fn(purchase);
     const outcome = await executePurchaseWithIdempotency(store, fn, params, {} as any);
@@ -189,6 +198,30 @@ describe("executePurchaseWithIdempotency", () => {
     expect(outcome.response.data.purchaseId).toBe("original");
     expect(outcome.idempotencyKey).toBe("done-key");
     expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("does NOT replay a stale stored success — performs a real purchase with a fresh key", async () => {
+    const { store, data } = makeStore();
+    const id = createLogicalPurchaseId(params);
+    data.set(id, {
+      id,
+      idempotencyKey: "old-done-key",
+      status: "success",
+      datamartData: successResponse({ purchaseId: "original", balanceAfter: 7 }),
+      createdAt: 1,
+      updatedAt: 1,
+    });
+    const fn = vi.fn(purchase);
+    const outcome = await executePurchaseWithIdempotency(store, fn, params, {} as any);
+    expect(outcome.outcome).toBe("success");
+    if (outcome.outcome !== "success") return;
+    // A real purchase happens: fresh idempotency key and a new provider call.
+    expect(outcome.response.data.purchaseId).toBe("p1");
+    expect(outcome.idempotencyKey).not.toBe("old-done-key");
+    expect(outcome.idempotencyKey).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(fn).toHaveBeenCalledTimes(1);
+    // The stale payload was replaced by the fresh provider response.
+    expect(data.get(id)?.datamartData?.data?.purchaseId).toBe("p1");
   });
 
   it("marks a non-retryable failure as failed with the same key", async () => {
